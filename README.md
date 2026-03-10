@@ -38,6 +38,81 @@ printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
 
 If you keep secrets in `~/.openclaw/.env`, the plugin and compat check script can read `GEMINI_API_KEY` from there.
 
+## Getting API Keys
+
+This plugin uses these environment variables:
+
+- `GEMINI_API_KEY`
+- `OPENAI_API_KEY`
+- `TOGETHER_API_KEY`
+
+### 1. Gemini
+
+Recommended for this plugin: use a Gemini API key that works with the Gemini Developer API and the `generativelanguage.googleapis.com` endpoint.
+
+Official docs:
+
+- Google AI Studio / Gemini API keys: <https://ai.google.dev/gemini-api/docs/api-key>
+- Google Cloud / Vertex AI API keys: <https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/api-keys>
+
+The simplest path is Google AI Studio:
+
+1. Open <https://aistudio.google.com/app/apikey>
+2. If needed, create a project or import an existing Google Cloud project into Google AI Studio
+3. Create or copy a Gemini API key
+4. Put it in `~/.openclaw/.env` as:
+
+```bash
+GEMINI_API_KEY=your_key_here
+```
+
+If you originally created the key through Google Cloud and do not remember how:
+
+- Google AI Studio can import Google Cloud projects and show Gemini-compatible keys for those projects
+- only keys with no restrictions, or keys restricted to the Generative Language API, are shown there
+- for this plugin, that is usually the easiest way to recover or recreate the key
+
+Important note:
+
+- this plugin currently uses the Gemini Developer API-style endpoint (`https://generativelanguage.googleapis.com/v1beta/...`)
+- it does **not** currently implement the full Vertex AI OAuth / Application Default Credentials flow
+- so if you are using Vertex AI in Google Cloud, prefer a plain API key compatible with the Gemini API for this plugin
+
+### 2. OpenAI
+
+Official docs:
+
+- OpenAI API key setup: <https://platform.openai.com/docs/quickstart#step-2-set-up-your-api-key>
+- OpenAI authentication reference: <https://platform.openai.com/docs/api-reference/authentication>
+
+Steps:
+
+1. Open your OpenAI Platform API key settings
+2. Create a new secret key
+3. Store it in `~/.openclaw/.env`:
+
+```bash
+OPENAI_API_KEY=your_key_here
+```
+
+### 3. Together AI
+
+Official docs:
+
+- Together authentication and API keys: <https://docs.together.ai/reference/authentication>
+
+Steps:
+
+1. Open <https://api.together.ai/>
+2. Go to `Settings`
+3. Open `API Keys`
+4. Copy or create a key
+5. Store it in `~/.openclaw/.env`:
+
+```bash
+TOGETHER_API_KEY=your_key_here
+```
+
 ## Install From Source
 
 ```bash
