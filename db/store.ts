@@ -38,6 +38,10 @@ function toNumberArray(value: unknown): number[] {
     const typedArray = value as unknown as { length: number; [index: number]: number };
     return Array.from({ length: typedArray.length }, (_item, index) => Number(typedArray[index] ?? 0));
   }
+  // Handle Apache Arrow Vector (returned by LanceDB query results)
+  if (value !== null && typeof value === "object" && Symbol.iterator in (value as object)) {
+    return Array.from(value as Iterable<unknown>, (item) => Number(item));
+  }
   return [];
 }
 
@@ -152,6 +156,9 @@ export class MemoryDB {
     }
     if (typeof query.limit === "function") {
       query = query.limit(candidateLimit);
+    }
+    if (typeof query.select === "function") {
+      query = query.select(["id", "text", "vector", "category", "importance", "createdAt", "lastHitAt", "hitCount", "agentId", "sessionKey"]);
     }
 
     const rows = (await query.toArray()) as Array<Record<string, unknown>>;
