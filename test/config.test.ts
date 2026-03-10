@@ -1,5 +1,6 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import { parseConfig, resolveDbPathForAgent } from "../config.js";
+import { parseConfig, resolveDbPathForAgent, worthyDbJsonSchema, worthyDbUiHints } from "../config.js";
 
 describe("parseConfig", () => {
   it("uses defaults and process env fallback for Gemini", () => {
@@ -21,6 +22,14 @@ describe("parseConfig", () => {
     expect(config.extraction.apiKey).toBe("");
   });
 
+  it("accepts a configurable recall minimum score", () => {
+    const config = parseConfig({
+      recallMinScore: 0.72,
+    });
+
+    expect(config.recallMinScore).toBe(0.72);
+  });
+
   it("replaces agent id in db path templates", () => {
     const resolved = resolveDbPathForAgent(
       "~/.openclaw/memory/worthydb/{agentId}",
@@ -29,5 +38,16 @@ describe("parseConfig", () => {
     );
 
     expect(resolved).toBe("/home/tester/.openclaw/memory/worthydb/family-bot");
+  });
+
+  it("keeps the checked-in plugin manifest aligned with config exports", async () => {
+    const raw = await readFile(new URL("../openclaw.plugin.json", import.meta.url), "utf8");
+    const manifest = JSON.parse(raw) as {
+      uiHints: unknown;
+      configSchema: unknown;
+    };
+
+    expect(manifest.uiHints).toEqual(worthyDbUiHints);
+    expect(manifest.configSchema).toEqual(worthyDbJsonSchema);
   });
 });

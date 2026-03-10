@@ -74,7 +74,7 @@ npm run build
 openclaw plugins install --link /absolute/path/to/memory-worthydb
 openclaw config set plugins.entries.memory-worthydb.enabled true --json
 openclaw config set plugins.slots.memory '"memory-worthydb"' --json
-openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite"},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
+openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite"},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"recallMinScore":0.45,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
 ```
 
 If OpenClaw refuses to update the config because the current config is invalid,
@@ -123,6 +123,7 @@ rather than from a separately copied bundle.
           "autoCapture": true,
           "autoRecall": true,
           "maxRecallResults": 8,
+          "recallMinScore": 0.45,
           "capture": {
             "skipCron": true,
             "skipNoReply": true,
@@ -173,6 +174,7 @@ All config keys currently supported by the schema are listed below.
 | `autoCapture` | `true` | Enables automatic extraction and storage after successful agent turns. |
 | `autoRecall` | `true` | Enables automatic recall injection before agent turns. |
 | `maxRecallResults` | `8` | Maximum number of recalled memories returned or injected. |
+| `recallMinScore` | `0.45` | Minimum cosine similarity required before a memory is injected into context. |
 | `capture.skipCron` | `true` | Skips capture for cron, isolated, or non-chat sessions. |
 | `capture.skipNoReply` | `true` | Skips sentinel outputs such as `NO_REPLY` and `HEARTBEAT_OK`. |
 | `capture.minTurnChars` | `20` | Minimum combined user and assistant text length eligible for extraction. |

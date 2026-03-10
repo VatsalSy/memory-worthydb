@@ -17,7 +17,7 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
     await fs.mkdir(stateDir, { recursive: true });
 
     try {
-      const input = `${new Array(15).fill("").join("\n")}\n`;
+      const input = `${new Array(16).fill("").join("\n")}\n`;
       const result = spawnSync("bash", [scriptPath], {
         cwd: repoRoot,
         encoding: "utf-8",
@@ -58,6 +58,7 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
         autoCapture: true,
         autoRecall: true,
         maxRecallResults: 8,
+        recallMinScore: 0.45,
         dedup: {
           threshold: 0.95,
         },
@@ -72,5 +73,5 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
     } finally {
       await fs.rm(tempRoot, { recursive: true, force: true });
     }
-  });
+  }, 15000);
 });

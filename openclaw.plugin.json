@@ -69,6 +69,12 @@
       "help": "Maximum memories injected or returned by recall.",
       "advanced": true
     },
+    "recallMinScore": {
+      "label": "Recall Min Score",
+      "placeholder": "0.45",
+      "help": "Minimum cosine similarity (0–1) for a memory to be injected. Higher = stricter relevance.",
+      "advanced": true
+    },
     "dedup.threshold": {
       "label": "Dedup Threshold",
       "placeholder": "0.95",
@@ -189,6 +195,11 @@
         "type": "number",
         "minimum": 1,
         "maximum": 20
+      },
+      "recallMinScore": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
       },
       "dedup": {
         "type": "object",

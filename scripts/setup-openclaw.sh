@@ -210,6 +210,7 @@ prompt_with_default db_path "Database path template" "${default_db_path}"
 prompt_yes_no auto_capture "Enable auto-capture" "true"
 prompt_yes_no auto_recall "Enable auto-recall" "true"
 prompt_integer max_recall_results "Max recall results" "8" "1" "20"
+prompt_float recall_min_score "Recall minimum score" "0.45" "0" "1"
 prompt_float dedup_threshold "Dedup threshold" "0.95" "0.5" "0.9999"
 prompt_integer ttl_preference "Preference TTL in days" "365" "0" "3650"
 prompt_integer ttl_decision "Decision TTL in days" "180" "0" "3650"
@@ -227,6 +228,7 @@ config_payload="$(
   WORTHYDB_AUTO_CAPTURE="${auto_capture}" \
   WORTHYDB_AUTO_RECALL="${auto_recall}" \
   WORTHYDB_MAX_RECALL_RESULTS="${max_recall_results}" \
+  WORTHYDB_RECALL_MIN_SCORE="${recall_min_score}" \
   WORTHYDB_DEDUP_THRESHOLD="${dedup_threshold}" \
   WORTHYDB_TTL_PREFERENCE="${ttl_preference}" \
   WORTHYDB_TTL_DECISION="${ttl_decision}" \
@@ -252,6 +254,7 @@ const payload = {
   autoCapture: boolValue("WORTHYDB_AUTO_CAPTURE"),
   autoRecall: boolValue("WORTHYDB_AUTO_RECALL"),
   maxRecallResults: intValue("WORTHYDB_MAX_RECALL_RESULTS"),
+  recallMinScore: floatValue("WORTHYDB_RECALL_MIN_SCORE"),
   dedup: {
     threshold: floatValue("WORTHYDB_DEDUP_THRESHOLD"),
   },
