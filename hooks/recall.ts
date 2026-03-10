@@ -41,7 +41,7 @@ export function buildRecallHandler(runtime: WorthyDbRuntime) {
       const db = runtime.stores.get(resolveAgentId(ctx));
       const results = await db.search(vector, {
         limit: runtime.config.maxRecallResults,
-        minScore: 0.3,
+        minScore: runtime.config.recallMinScore,
       });
 
       if (results.length === 0) {

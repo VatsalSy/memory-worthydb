@@ -21,6 +21,7 @@ const baseConfig: WorthyDbConfig = {
   autoCapture: true,
   autoRecall: true,
   maxRecallResults: 8,
+  recallMinScore: 0.45,
   dedup: { threshold: 0.95 },
   ttl: {
     preference: 365,

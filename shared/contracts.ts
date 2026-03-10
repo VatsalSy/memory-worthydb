@@ -49,6 +49,7 @@ export type WorthyDbConfig = {
   autoCapture: boolean;
   autoRecall: boolean;
   maxRecallResults: number;
+  recallMinScore: number;
   dedup: {
     threshold: number;
   };

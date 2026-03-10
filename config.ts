@@ -24,6 +24,7 @@ const DEFAULTS: WorthyDbConfig = {
   autoCapture: true,
   autoRecall: true,
   maxRecallResults: 8,
+  recallMinScore: 0.45,
   dedup: {
     threshold: 0.95,
   },
@@ -106,6 +107,12 @@ const UI_HINTS: Record<string, PluginConfigUiHint> = {
     label: "Max Recall Results",
     placeholder: String(DEFAULTS.maxRecallResults),
     help: "Maximum memories injected or returned by recall.",
+    advanced: true,
+  },
+  recallMinScore: {
+    label: "Recall Min Score",
+    placeholder: "0.45",
+    help: "Minimum cosine similarity (0–1) for a memory to be injected. Higher = stricter relevance.",
     advanced: true,
   },
   "dedup.threshold": {
@@ -196,6 +203,7 @@ const JSON_SCHEMA = {
     autoCapture: { type: "boolean" },
     autoRecall: { type: "boolean" },
     maxRecallResults: { type: "number", minimum: 1, maximum: 20 },
+    recallMinScore: { type: "number", minimum: 0, maximum: 1 },
     dedup: {
       type: "object",
       additionalProperties: false,
@@ -353,6 +361,7 @@ export function parseConfig(value: unknown): WorthyDbConfig {
         "autoCapture",
         "autoRecall",
         "maxRecallResults",
+        "recallMinScore",
         "dedup",
         "ttl",
         "capture",
@@ -419,6 +428,11 @@ export function parseConfig(value: unknown): WorthyDbConfig {
       1,
       20,
       "maxRecallResults",
+    ),
+    recallMinScore: clamp(
+      typeof cfg.recallMinScore === "number" ? cfg.recallMinScore : DEFAULTS.recallMinScore,
+      0,
+      1,
     ),
     dedup: {
       threshold:
