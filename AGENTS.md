@@ -1,23 +1,42 @@
 # memory-worthydb
 
-Repository scaffold for memory-related OpenClaw integration work. The tracked repo is intentionally minimal right now; large local experiments and vendor checkouts live under `do-not-commit/` and are not part of version control.
+TypeScript OpenClaw memory plugin for local-first capture, extraction, recall, and pruning. This repo should track the plugin implementation itself; local upstream clones and scratch material belong under `do-not-commit/` only.
 
-## Structure
+## Intended Structure
 
 ```text
 memory-worthydb/
-├── README.md       # Project overview
-├── AGENTS.md       # Agent instructions for this repo
-├── do-not-commit/  # Local-only scratch work and external checkouts
-└── .gitignore      # Ignore rules for local artifacts
+├── index.ts                 # Plugin entry point
+├── config.ts                # Config schema and defaults
+├── openclaw.plugin.json     # OpenClaw manifest
+├── package.json             # Package metadata
+├── tsconfig.json            # TypeScript config
+├── db/                      # LanceDB wrapper
+├── embeddings/              # Ollama embedding client
+├── extraction/              # Gemini extraction client
+├── hooks/                   # Capture and recall hooks
+├── tools/                   # Manual memory tools
+├── prune/                   # TTL and dedup sweep logic
+├── scripts/                 # Maintenance scripts
+└── do-not-commit/           # Local-only upstream references
 ```
 
 ## Development
 
-Add project-specific build, test, and run commands here as the tracked codebase takes shape.
+Expected workflow once implementation starts:
+
+```bash
+npm install
+npm run build
+npm test
+```
+
+Adjust commands if the repo standardizes on Bun instead of npm.
 
 ## Guidelines
 
 - Do not commit anything under `do-not-commit/`.
-- Prefer portable paths and repo-relative commands in checked-in files.
-- Update `README.md` and this file when the tracked project structure becomes concrete.
+- Keep the plugin installable as an OpenClaw extension without upstream OpenClaw modifications.
+- Prefer plain `fetch`-based HTTP clients for Gemini and Ollama unless a stronger reason appears.
+- Preserve per-agent isolation in storage and config handling.
+- Keep checked-in paths portable; avoid machine-specific absolute paths.

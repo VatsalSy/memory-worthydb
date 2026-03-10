@@ -3,18 +3,31 @@ do-not-commit/
 
 # Dependencies
 node_modules/
+.bun/
 
 # Build output
 dist/
 build/
+coverage/
+*.tsbuildinfo
 
 # IDE
 .idea/
 .vscode/
 
+# Logs
+*.log
+npm-debug.log*
+bun-debug.log*
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
 
 # Local Claude/Codex overlay
 CLAUDE.md

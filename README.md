@@ -1,25 +1,42 @@
 # memory-worthydb
 
-Working repository for memory-related experiments and implementation work around OpenClaw integrations.
+Local-first long-term memory plugin for OpenClaw.
 
 ## Overview
 
-This repository is initialized as the tracked home for `memory-worthydb`. The current local workspace includes a `do-not-commit/` area for upstream checkouts, experiments, and scratch material that should stay outside version control until curated into the main project.
+`memory-worthydb` is intended to be a drop-in memory plugin that combines passive capture, LLM-based fact extraction, local vector storage, and per-agent isolation without requiring upstream OpenClaw changes. The planned implementation uses Gemini 2.5 Flash Lite for extraction, Ollama `qwen3-embedding` for embeddings, and LanceDB for storage.
 
-## Current Scope
+## Planned Architecture
 
-- Keep repository metadata and project instructions under version control
-- Preserve local scratch dependencies under `do-not-commit/`
-- Add production code to the top level or a dedicated `src/` layout as the project takes shape
+- OpenClaw extension plugin with `index.ts` entrypoint and `openclaw.plugin.json` manifest
+- Passive capture and recall hooks under `hooks/`
+- LanceDB-backed store under `db/`
+- Plain HTTP clients for Gemini extraction and Ollama embeddings
+- Manual memory tools plus scheduled prune logic
+- Workspace-local `do-not-commit/` references for upstream clones and scratch work
 
-## Usage
+## Expected Layout
 
-```bash
-git clone git@github.com:VatsalSy/memory-worthydb.git
-cd memory-worthydb
+```text
+memory-worthydb/
+├── index.ts
+├── config.ts
+├── openclaw.plugin.json
+├── package.json
+├── tsconfig.json
+├── db/
+├── embeddings/
+├── extraction/
+├── hooks/
+├── tools/
+├── prune/
+├── scripts/
+└── do-not-commit/
 ```
 
-As code is added, update this README with setup and development commands.
+## Development Notes
+
+The repository is still in pre-build stage. Keep local reference checkouts and experiments under `do-not-commit/`, and keep tracked files focused on the actual plugin implementation and repo documentation.
 
 ## License
 
