@@ -261,6 +261,10 @@ Why these:
 
 Avoid Together reasoning-style models such as `openai/gpt-oss-20b` for this use case. In testing, they can spend the token budget on reasoning and leave the final `message.content` empty.
 
+## Acknowledgments
+
+Thanks to the [OpenClaw LanceDB memory plugin](https://github.com/openclaw/openclaw/tree/main/extensions/memory-lancedb) and the [OpenClaw Supermemory plugin](https://github.com/supermemoryai/openclaw-supermemory) for inspiration.
+
 ## Configuration Reference
 
 All config keys currently supported by the schema are listed below.
