@@ -14,6 +14,22 @@ export type ExtractedFact = {
   importance: number;
 };
 
+export const EXTRACTION_PROVIDERS = ["gemini", "openai", "together"] as const;
+
+export type ExtractionProvider = (typeof EXTRACTION_PROVIDERS)[number];
+
+export type ExtractionProviderConfig = {
+  provider: ExtractionProvider;
+  apiKey: string;
+  model: string;
+  baseUrl: string;
+  timeoutMs: number;
+};
+
+export type MemoryExtractor = {
+  extractFacts(userText: string, assistantText: string): Promise<ExtractedFact[]>;
+};
+
 export type MemoryEntry = {
   id: string;
   text: string;
@@ -34,10 +50,9 @@ export type MemorySearchResult = {
 
 export type WorthyDbConfig = {
   extraction: {
-    apiKey: string;
-    model: string;
     maxFacts: number;
-    timeoutMs: number;
+    primary: ExtractionProviderConfig;
+    fallback: ExtractionProviderConfig;
   };
   embedding: {
     ollamaUrl: string;

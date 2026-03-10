@@ -4,27 +4,69 @@
   "description": "Local-first LLM-extracted long-term memory for OpenClaw",
   "kind": "memory",
   "uiHints": {
-    "extraction.apiKey": {
-      "label": "Gemini API Key",
-      "sensitive": true,
-      "placeholder": "${GEMINI_API_KEY}",
-      "help": "Gemini API key used for durable fact extraction."
-    },
-    "extraction.model": {
-      "label": "Gemini Model",
-      "placeholder": "gemini-2.5-flash-lite",
-      "help": "Gemini model used for extraction."
-    },
     "extraction.maxFacts": {
       "label": "Max Extracted Facts",
       "placeholder": "5",
       "help": "Maximum number of atomic memories extracted from a turn.",
       "advanced": true
     },
-    "extraction.timeoutMs": {
-      "label": "Extraction Timeout",
+    "extraction.primary.provider": {
+      "label": "Primary Provider",
+      "placeholder": "gemini",
+      "help": "Primary extraction provider. Supported values: gemini, openai, together."
+    },
+    "extraction.primary.apiKey": {
+      "label": "Primary API Key",
+      "sensitive": true,
+      "placeholder": "${GEMINI_API_KEY}",
+      "help": "Primary extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted."
+    },
+    "extraction.primary.model": {
+      "label": "Primary Model",
+      "placeholder": "gemini-2.5-flash-lite",
+      "help": "Primary extraction model id."
+    },
+    "extraction.primary.baseUrl": {
+      "label": "Primary Base URL",
+      "placeholder": "https://generativelanguage.googleapis.com/v1beta",
+      "help": "Primary provider API base URL.",
+      "advanced": true
+    },
+    "extraction.primary.timeoutMs": {
+      "label": "Primary Timeout",
       "placeholder": "8000",
-      "help": "Gemini request timeout in milliseconds.",
+      "help": "Primary extraction timeout in milliseconds.",
+      "advanced": true
+    },
+    "extraction.fallback.provider": {
+      "label": "Fallback Provider",
+      "placeholder": "openai",
+      "help": "Fallback extraction provider. Supported values: gemini, openai, together.",
+      "advanced": true
+    },
+    "extraction.fallback.apiKey": {
+      "label": "Fallback API Key",
+      "sensitive": true,
+      "placeholder": "${OPENAI_API_KEY}",
+      "help": "Fallback extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted.",
+      "advanced": true
+    },
+    "extraction.fallback.model": {
+      "label": "Fallback Model",
+      "placeholder": "gpt-4o-mini",
+      "help": "Provider-specific model id for fallback extraction. Leave blank to disable fallback extraction.",
+      "advanced": true
+    },
+    "extraction.fallback.baseUrl": {
+      "label": "Fallback Base URL",
+      "placeholder": "https://api.openai.com/v1",
+      "help": "Optional override for the fallback provider API base URL.",
+      "advanced": true
+    },
+    "extraction.fallback.timeoutMs": {
+      "label": "Fallback Timeout",
+      "placeholder": "8000",
+      "help": "Fallback extraction timeout in milliseconds.",
       "advanced": true
     },
     "embedding.ollamaUrl": {
@@ -141,22 +183,78 @@
       "extraction": {
         "type": "object",
         "additionalProperties": false,
-        "properties": {
-          "apiKey": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string"
-          },
-          "maxFacts": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 10
-          },
-          "timeoutMs": {
-            "type": "number",
-            "minimum": 1000,
-            "maximum": 60000
+      "properties": {
+        "maxFacts": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "apiKey": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "timeoutMs": {
+          "type": "number",
+          "minimum": 1000,
+          "maximum": 60000
+        },
+        "primary": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "gemini",
+                "openai",
+                "together"
+              ]
+            },
+            "apiKey": {
+              "type": "string"
+            },
+            "model": {
+              "type": "string"
+            },
+            "baseUrl": {
+              "type": "string"
+            },
+            "timeoutMs": {
+              "type": "number",
+              "minimum": 1000,
+              "maximum": 60000
+            }
+          }
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "gemini",
+                "openai",
+                "together"
+              ]
+              },
+              "apiKey": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "baseUrl": {
+                "type": "string"
+              },
+              "timeoutMs": {
+                "type": "number",
+                "minimum": 1000,
+                "maximum": 60000
+              }
+            }
           }
         }
       },

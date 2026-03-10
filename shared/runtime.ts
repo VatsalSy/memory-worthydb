@@ -1,15 +1,14 @@
 import type { PluginLogger } from "openclaw/plugin-sdk";
 import type { MemoryStoreManager } from "../db/store.js";
 import type { OllamaEmbeddingsClient } from "../embeddings/ollama.js";
-import type { GeminiExtractionClient } from "../extraction/gemini.js";
-import type { AgentScopedContext, WorthyDbConfig } from "./contracts.js";
+import type { AgentScopedContext, MemoryExtractor, WorthyDbConfig } from "./contracts.js";
 
 export type WorthyDbRuntime = {
   config: WorthyDbConfig;
   logger: PluginLogger;
   stores: MemoryStoreManager;
   embeddings: OllamaEmbeddingsClient;
-  extractor: GeminiExtractionClient;
+  extractor: MemoryExtractor;
 };
 
 export function resolveAgentId(ctx?: AgentScopedContext): string {

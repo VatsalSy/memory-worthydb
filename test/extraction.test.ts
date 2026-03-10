@@ -24,5 +24,7 @@ describe("parseExtractedFacts", () => {
     const prompt = buildExtractionPrompt("User text", "Assistant text", 5);
     expect(prompt).toContain("User: User text");
     expect(prompt).toContain("Assistant: Assistant text");
+    expect(prompt).toContain("Never store ephemeral session-state");
+    expect(prompt).toContain("Never store assistant persona/style facts");
   });
 });

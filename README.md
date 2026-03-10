@@ -8,7 +8,8 @@ Local-first long-term memory plugin for OpenClaw.
 
 - Automatic post-turn capture through `agent_end`
 - Automatic pre-turn recall through `before_agent_start`
-- Gemini 2.5 Flash Lite extraction over direct HTTP
+- Provider-neutral extraction with `gemini`, `openai`, or `together` as primary or fallback
+- Gemini direct HTTP extraction plus OpenAI-compatible chat completions for OpenAI and Together
 - Ollama `qwen3-embedding` local embeddings
 - LanceDB local vector storage
 - Per-agent database isolation through `dbPath` templates
@@ -23,7 +24,7 @@ Before installing from source, make sure all of the following are already availa
 - `openclaw`, `node`, `npm`, and `curl` on `PATH`
 - Ollama running locally at `http://localhost:11434` or another reachable URL
 - The `qwen3-embedding` model pulled into Ollama
-- A Gemini API key available either in your shell environment or in `~/.openclaw/.env`
+- The API key(s) for whichever extraction providers you plan to use, available either in your shell environment or in `~/.openclaw/.env`
 
 Recommended prerequisite checks:
 
@@ -44,9 +45,10 @@ npm install
 ./scripts/setup-openclaw.sh
 ```
 
-The setup script is interactive. It prompts for the Gemini model, Ollama URL/model,
-database path template, recall limits, dedup threshold, and TTL values. Press `Enter`
-at each prompt to accept the recommended defaults.
+The setup script is interactive. It prompts for a primary extractor provider/model,
+an optional fallback extractor provider/model, Ollama URL/model, database path
+template, recall limits, dedup threshold, and TTL values. Press `Enter` at each
+prompt to accept the recommended defaults.
 
 The setup script:
 
@@ -74,7 +76,7 @@ npm run build
 openclaw plugins install --link /absolute/path/to/memory-worthydb
 openclaw config set plugins.entries.memory-worthydb.enabled true --json
 openclaw config set plugins.slots.memory '"memory-worthydb"' --json
-openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite"},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"recallMinScore":0.45,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
+openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"maxFacts":5,"primary":{"provider":"gemini","apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite","baseUrl":"https://generativelanguage.googleapis.com/v1beta","timeoutMs":8000},"fallback":{"provider":"openai","apiKey":"${OPENAI_API_KEY}","model":"gpt-4o-mini","baseUrl":"https://api.openai.com/v1","timeoutMs":8000}},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"recallMinScore":0.45,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
 ```
 
 If OpenClaw refuses to update the config because the current config is invalid,
@@ -108,10 +110,21 @@ rather than from a separately copied bundle.
         "enabled": true,
         "config": {
           "extraction": {
-            "apiKey": "${GEMINI_API_KEY}",
-            "model": "gemini-2.5-flash-lite",
             "maxFacts": 5,
-            "timeoutMs": 8000
+            "primary": {
+              "provider": "gemini",
+              "apiKey": "${GEMINI_API_KEY}",
+              "model": "gemini-2.5-flash-lite",
+              "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+              "timeoutMs": 8000
+            },
+            "fallback": {
+              "provider": "openai",
+              "apiKey": "${OPENAI_API_KEY}",
+              "model": "gpt-4o-mini",
+              "baseUrl": "https://api.openai.com/v1",
+              "timeoutMs": 8000
+            }
           },
           "embedding": {
             "ollamaUrl": "http://localhost:11434",
@@ -152,9 +165,26 @@ rather than from a separately copied bundle.
 Ollama must already be running and have the `qwen3-embedding` model available
 locally for semantic search and recall.
 
-If Gemini is unavailable or `GEMINI_API_KEY` is missing, automatic extraction after
-turns is skipped, but the plugin can still load and manual/semantic recall can still
-work as long as Ollama is available.
+If Gemini is unavailable or `GEMINI_API_KEY` is missing, extraction can fall back to
+an OpenAI, Gemini, or Together model when `extraction.fallback` is configured. If no fallback
+is configured, automatic extraction after turns is skipped, but the plugin can still
+load and manual/semantic recall can still work as long as Ollama is available.
+
+## Recommended Models
+
+Recommended provider/model pairs for this plugin:
+
+- `gemini`: `gemini-2.5-flash-lite`
+- `openai`: `gpt-4o-mini`
+- `together`: `meta-llama/Llama-3.3-70B-Instruct-Turbo`
+
+Why these:
+
+- `gemini-2.5-flash-lite` is the current fast, cheap default already used successfully in this plugin.
+- `gpt-4o-mini` is a better fit than a GPT-5 small model for terse JSON extraction because it is cheaper and already validated against this plugin's prompt/response pattern.
+- `meta-llama/Llama-3.3-70B-Instruct-Turbo` behaved better than reasoning-style Together models for short extraction tasks.
+
+Avoid Together reasoning-style models such as `openai/gpt-oss-20b` for this use case. In testing, they can spend the token budget on reasoning and leave the final `message.content` empty.
 
 ## Configuration Reference
 
@@ -162,10 +192,17 @@ All config keys currently supported by the schema are listed below.
 
 | Key | Default | Purpose |
 | --- | --- | --- |
-| `extraction.apiKey` | `""` | Gemini API key or `${GEMINI_API_KEY}` placeholder used for post-turn extraction. |
-| `extraction.model` | `gemini-2.5-flash-lite` | Gemini model used to extract durable memory facts. |
 | `extraction.maxFacts` | `5` | Maximum number of memories extracted from a single turn. |
-| `extraction.timeoutMs` | `8000` | Timeout for Gemini extraction requests in milliseconds. |
+| `extraction.primary.provider` | `gemini` | Primary extractor provider. Supported values: `gemini`, `openai`, `together`. |
+| `extraction.primary.apiKey` | provider env | Primary provider API key. When omitted, the plugin checks `GEMINI_API_KEY`, `OPENAI_API_KEY`, or `TOGETHER_API_KEY` based on provider. |
+| `extraction.primary.model` | `gemini-2.5-flash-lite` | Primary extractor model id. |
+| `extraction.primary.baseUrl` | provider default | Primary API base URL. |
+| `extraction.primary.timeoutMs` | `8000` | Timeout for primary extraction requests in milliseconds. |
+| `extraction.fallback.provider` | `openai` | Fallback extractor provider. Supported values: `gemini`, `openai`, `together`. |
+| `extraction.fallback.apiKey` | provider env | Optional fallback API key. When omitted, the plugin checks the provider-specific env var. |
+| `extraction.fallback.model` | `gpt-4o-mini` | Fallback model id. Leave blank to disable fallback extraction. |
+| `extraction.fallback.baseUrl` | provider default | Fallback API base URL, defaulting to the selected provider's standard endpoint. |
+| `extraction.fallback.timeoutMs` | `8000` | Timeout for fallback extraction requests in milliseconds. |
 | `embedding.ollamaUrl` | `http://localhost:11434` | Base URL for the local Ollama server. |
 | `embedding.model` | `qwen3-embedding:latest` | Ollama model used to embed stored memories and search queries. |
 | `embedding.dimensions` | `4096` | Expected vector dimension for the selected embedding model. |
@@ -199,7 +236,9 @@ openclaw worthydb stats --agent main
 ## Notes
 
 - The plugin never requires upstream OpenClaw modifications.
-- If Ollama or Gemini are unavailable, the agent still runs; memory capture/recall degrades gracefully.
+- The extraction prompt intentionally rejects ephemeral session-state facts such as time-of-day, temporary mood, or assistant persona drift.
+- The runtime still accepts the legacy `extraction.apiKey` / `extraction.model` / `extraction.timeoutMs` Gemini shape while migrating to the new provider-neutral config.
+- If Ollama or any extraction provider is unavailable, the agent still runs; memory capture/recall degrades gracefully.
 - `scripts/compat-check.sh` is intended as a quick post-update smoke check after `openclaw update`.
 - The setup script writes backups before config changes and is safe to test with `OPENCLAW_STATE_DIR` and `OPENCLAW_CONFIG_PATH`.
 - Recommended verification after setup:

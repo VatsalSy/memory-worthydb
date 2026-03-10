@@ -2,7 +2,7 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { parseConfig, worthyDbConfigSchema } from "./config.js";
 import { MemoryStoreManager } from "./db/store.js";
 import { OllamaEmbeddingsClient } from "./embeddings/ollama.js";
-import { GeminiExtractionClient } from "./extraction/gemini.js";
+import { buildExtractionClient } from "./extraction/client.js";
 import { buildCaptureHandler } from "./hooks/capture.js";
 import { buildRecallHandler } from "./hooks/recall.js";
 import { pruneStore } from "./prune/prune.js";
@@ -56,7 +56,7 @@ const worthyDbPlugin = {
       logger: api.logger,
       stores: new MemoryStoreManager(config, api.resolvePath),
       embeddings: new OllamaEmbeddingsClient(config.embedding, api.logger),
-      extractor: new GeminiExtractionClient(config.extraction, api.logger),
+      extractor: buildExtractionClient(config.extraction, api.logger),
     };
 
     registerRecallTool(api, runtime);
@@ -173,8 +173,10 @@ const worthyDbPlugin = {
         api.logger.info(
           `worthydb: initialized (db template: ${config.dbPath}, embedding model: ${config.embedding.model})`,
         );
-        if (!config.extraction.apiKey) {
-          api.logger.warn("worthydb: Gemini API key missing; auto-capture extraction will be skipped");
+        if (!config.extraction.primary.apiKey) {
+          api.logger.warn(
+            `worthydb: ${config.extraction.primary.provider} primary API key missing; extraction will use fallback if configured`,
+          );
         }
       },
       stop: () => {

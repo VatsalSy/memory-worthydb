@@ -2,17 +2,36 @@ import fs from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import type { OpenClawPluginConfigSchema, PluginConfigUiHint } from "openclaw/plugin-sdk";
-import type { WorthyDbConfig } from "./shared/contracts.js";
+import {
+  EXTRACTION_PROVIDERS,
+  type ExtractionProvider,
+  type ExtractionProviderConfig,
+  type WorthyDbConfig,
+} from "./shared/contracts.js";
 import { clamp } from "./shared/text.js";
 
 const DEFAULT_DB_PATH = "~/.openclaw/memory/worthydb/{agentId}";
+const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 
 const DEFAULTS: WorthyDbConfig = {
   extraction: {
-    apiKey: "",
-    model: "gemini-2.5-flash-lite",
     maxFacts: 5,
-    timeoutMs: 8000,
+    primary: {
+      provider: "gemini",
+      apiKey: "",
+      model: "gemini-2.5-flash-lite",
+      baseUrl: DEFAULT_GEMINI_BASE_URL,
+      timeoutMs: 8000,
+    },
+    fallback: {
+      provider: "openai",
+      apiKey: "",
+      model: "gpt-4o-mini",
+      baseUrl: DEFAULT_OPENAI_BASE_URL,
+      timeoutMs: 8000,
+    },
   },
   embedding: {
     ollamaUrl: "http://localhost:11434",
@@ -44,27 +63,69 @@ const DEFAULTS: WorthyDbConfig = {
 };
 
 const UI_HINTS: Record<string, PluginConfigUiHint> = {
-  "extraction.apiKey": {
-    label: "Gemini API Key",
-    sensitive: true,
-    placeholder: "${GEMINI_API_KEY}",
-    help: "Gemini API key used for durable fact extraction.",
-  },
-  "extraction.model": {
-    label: "Gemini Model",
-    placeholder: DEFAULTS.extraction.model,
-    help: "Gemini model used for extraction.",
-  },
   "extraction.maxFacts": {
     label: "Max Extracted Facts",
     placeholder: String(DEFAULTS.extraction.maxFacts),
     help: "Maximum number of atomic memories extracted from a turn.",
     advanced: true,
   },
-  "extraction.timeoutMs": {
-    label: "Extraction Timeout",
-    placeholder: String(DEFAULTS.extraction.timeoutMs),
-    help: "Gemini request timeout in milliseconds.",
+  "extraction.primary.provider": {
+    label: "Primary Provider",
+    placeholder: DEFAULTS.extraction.primary.provider,
+    help: "Primary extraction provider. Supported values: gemini, openai, together.",
+  },
+  "extraction.primary.apiKey": {
+    label: "Primary API Key",
+    sensitive: true,
+    placeholder: "${GEMINI_API_KEY}",
+    help: "Primary extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted.",
+  },
+  "extraction.primary.model": {
+    label: "Primary Model",
+    placeholder: DEFAULTS.extraction.primary.model,
+    help: "Primary extraction model id.",
+  },
+  "extraction.primary.baseUrl": {
+    label: "Primary Base URL",
+    placeholder: DEFAULTS.extraction.primary.baseUrl,
+    help: "Primary provider API base URL.",
+    advanced: true,
+  },
+  "extraction.primary.timeoutMs": {
+    label: "Primary Timeout",
+    placeholder: String(DEFAULTS.extraction.primary.timeoutMs),
+    help: "Primary extraction timeout in milliseconds.",
+    advanced: true,
+  },
+  "extraction.fallback.provider": {
+    label: "Fallback Provider",
+    placeholder: DEFAULTS.extraction.fallback.provider,
+    help: "Fallback extraction provider. Supported values: gemini, openai, together.",
+    advanced: true,
+  },
+  "extraction.fallback.apiKey": {
+    label: "Fallback API Key",
+    sensitive: true,
+    placeholder: "${OPENAI_API_KEY}",
+    help: "Fallback extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted.",
+    advanced: true,
+  },
+  "extraction.fallback.model": {
+    label: "Fallback Model",
+    placeholder: DEFAULTS.extraction.fallback.model,
+    help: "Provider-specific model id for fallback extraction. Leave blank to disable fallback extraction.",
+    advanced: true,
+  },
+  "extraction.fallback.baseUrl": {
+    label: "Fallback Base URL",
+    placeholder: DEFAULT_OPENAI_BASE_URL,
+    help: "Optional override for the fallback provider API base URL.",
+    advanced: true,
+  },
+  "extraction.fallback.timeoutMs": {
+    label: "Fallback Timeout",
+    placeholder: String(DEFAULTS.extraction.fallback.timeoutMs),
+    help: "Fallback extraction timeout in milliseconds.",
     advanced: true,
   },
   "embedding.ollamaUrl": {
@@ -183,10 +244,38 @@ const JSON_SCHEMA = {
       type: "object",
       additionalProperties: false,
       properties: {
+        maxFacts: { type: "number", minimum: 1, maximum: 10 },
         apiKey: { type: "string" },
         model: { type: "string" },
-        maxFacts: { type: "number", minimum: 1, maximum: 10 },
         timeoutMs: { type: "number", minimum: 1000, maximum: 60000 },
+        primary: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            provider: {
+              type: "string",
+              enum: [...EXTRACTION_PROVIDERS],
+            },
+            apiKey: { type: "string" },
+            model: { type: "string" },
+            baseUrl: { type: "string" },
+            timeoutMs: { type: "number", minimum: 1000, maximum: 60000 },
+          },
+        },
+        fallback: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            provider: {
+              type: "string",
+              enum: [...EXTRACTION_PROVIDERS],
+            },
+            apiKey: { type: "string" },
+            model: { type: "string" },
+            baseUrl: { type: "string" },
+            timeoutMs: { type: "number", minimum: 1000, maximum: 60000 },
+          },
+        },
       },
     },
     embedding: {
@@ -320,11 +409,62 @@ function resolveConfigString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? resolveEnvPlaceholders(value.trim()) : fallback;
 }
 
-function resolveGeminiApiKey(value: unknown): string {
+function resolveOptionalApiKey(value: unknown, envVarName?: string): string {
   if (typeof value === "string" && value.trim()) {
     return resolveEnvPlaceholders(value.trim(), false);
   }
-  return getEnvValue("GEMINI_API_KEY") ?? "";
+  return envVarName ? getEnvValue(envVarName) ?? "" : "";
+}
+
+function getProviderEnvVar(provider: ExtractionProvider): string {
+  if (provider === "gemini") {
+    return "GEMINI_API_KEY";
+  }
+  if (provider === "together") {
+    return "TOGETHER_API_KEY";
+  }
+  return "OPENAI_API_KEY";
+}
+
+function getDefaultBaseUrl(provider: ExtractionProvider): string {
+  if (provider === "gemini") {
+    return DEFAULT_GEMINI_BASE_URL;
+  }
+  if (provider === "together") {
+    return DEFAULT_TOGETHER_BASE_URL;
+  }
+  return DEFAULT_OPENAI_BASE_URL;
+}
+
+function resolveProvider(value: unknown, fallback: ExtractionProvider, label: string): ExtractionProvider {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== "string" || !EXTRACTION_PROVIDERS.includes(value as ExtractionProvider)) {
+    throw new Error(`${label} must be one of: ${EXTRACTION_PROVIDERS.join(", ")}`);
+  }
+  return value as ExtractionProvider;
+}
+
+function resolveProviderConfig(
+  value: Record<string, unknown> | null,
+  defaults: ExtractionProviderConfig,
+  label: string,
+): ExtractionProviderConfig {
+  const provider = resolveProvider(value?.provider, defaults.provider, `${label}.provider`);
+  return {
+    provider,
+    apiKey: resolveOptionalApiKey(value?.apiKey, getProviderEnvVar(provider)),
+    model: resolveConfigString(value?.model, defaults.model),
+    baseUrl: resolveConfigString(value?.baseUrl, getDefaultBaseUrl(provider)),
+    timeoutMs: resolveInteger(
+      value?.timeoutMs,
+      defaults.timeoutMs,
+      1000,
+      60000,
+      `${label}.timeoutMs`,
+    ),
+  };
 }
 
 function resolveInteger(value: unknown, fallback: number, min: number, max: number, label: string): number {
@@ -375,17 +515,27 @@ export function parseConfig(value: unknown): WorthyDbConfig {
   const dedup = cfg.dedup ? asRecord(cfg.dedup, "dedup") : {};
   const ttl = cfg.ttl ? asRecord(cfg.ttl, "ttl") : {};
   const capture = cfg.capture ? asRecord(cfg.capture, "capture") : {};
+  const extractionPrimary = extraction.primary ? asRecord(extraction.primary, "extraction.primary") : null;
+  const extractionFallback = extraction.fallback ? asRecord(extraction.fallback, "extraction.fallback") : null;
 
-  assertAllowedKeys(extraction, ["apiKey", "model", "maxFacts", "timeoutMs"], "extraction");
+  assertAllowedKeys(extraction, ["apiKey", "model", "maxFacts", "timeoutMs", "primary", "fallback"], "extraction");
   assertAllowedKeys(embedding, ["ollamaUrl", "model", "dimensions", "timeoutMs"], "embedding");
   assertAllowedKeys(dedup, ["threshold"], "dedup");
   assertAllowedKeys(ttl, ["preference", "decision", "entity", "fact", "other"], "ttl");
   assertAllowedKeys(capture, ["skipCron", "skipNoReply", "minTurnChars", "maxTurnChars"], "capture");
+  if (extractionPrimary) {
+    assertAllowedKeys(extractionPrimary, ["provider", "apiKey", "model", "baseUrl", "timeoutMs"], "extraction.primary");
+  }
+  if (extractionFallback) {
+    assertAllowedKeys(
+      extractionFallback,
+      ["provider", "apiKey", "model", "baseUrl", "timeoutMs"],
+      "extraction.fallback",
+    );
+  }
 
   const parsed: WorthyDbConfig = {
     extraction: {
-      apiKey: resolveGeminiApiKey(extraction.apiKey),
-      model: resolveConfigString(extraction.model, DEFAULTS.extraction.model),
       maxFacts: resolveInteger(
         extraction.maxFacts,
         DEFAULTS.extraction.maxFacts,
@@ -393,13 +543,24 @@ export function parseConfig(value: unknown): WorthyDbConfig {
         10,
         "extraction.maxFacts",
       ),
-      timeoutMs: resolveInteger(
-        extraction.timeoutMs,
-        DEFAULTS.extraction.timeoutMs,
-        1000,
-        60000,
-        "extraction.timeoutMs",
-      ),
+      primary: extractionPrimary
+        ? resolveProviderConfig(extractionPrimary, DEFAULTS.extraction.primary, "extraction.primary")
+        : {
+            provider: "gemini",
+            apiKey: resolveOptionalApiKey(extraction.apiKey, getProviderEnvVar("gemini")),
+            model: resolveConfigString(extraction.model, DEFAULTS.extraction.primary.model),
+            baseUrl: DEFAULTS.extraction.primary.baseUrl,
+            timeoutMs: resolveInteger(
+              extraction.timeoutMs,
+              DEFAULTS.extraction.primary.timeoutMs,
+              1000,
+              60000,
+              "extraction.timeoutMs",
+            ),
+          },
+      fallback: {
+        ...resolveProviderConfig(extractionFallback, DEFAULTS.extraction.fallback, "extraction.fallback"),
+      },
     },
     embedding: {
       ollamaUrl: resolveConfigString(embedding.ollamaUrl, DEFAULTS.embedding.ollamaUrl),

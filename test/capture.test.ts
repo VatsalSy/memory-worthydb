@@ -6,10 +6,21 @@ import { detectMemoryCategory } from "../shared/text.js";
 
 const baseConfig: WorthyDbConfig = {
   extraction: {
-    apiKey: "",
-    model: "gemini-2.5-flash-lite",
     maxFacts: 5,
-    timeoutMs: 8000,
+    primary: {
+      provider: "gemini",
+      apiKey: "",
+      model: "gemini-2.5-flash-lite",
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+      timeoutMs: 8000,
+    },
+    fallback: {
+      provider: "openai",
+      apiKey: "",
+      model: "gpt-4o-mini",
+      baseUrl: "https://api.openai.com/v1",
+      timeoutMs: 8000,
+    },
   },
   embedding: {
     ollamaUrl: "http://localhost:11434",

@@ -17,7 +17,7 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
     await fs.mkdir(stateDir, { recursive: true });
 
     try {
-      const input = `${new Array(16).fill("").join("\n")}\n`;
+      const input = `${new Array(23).fill("").join("\n")}\n`;
       const result = spawnSync("bash", [scriptPath], {
         cwd: repoRoot,
         encoding: "utf-8",
@@ -46,8 +46,21 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
       expect(config.plugins?.entries?.["memory-worthydb"]?.enabled).toBe(true);
       expect(config.plugins?.entries?.["memory-worthydb"]?.config).toMatchObject({
         extraction: {
-          apiKey: "${GEMINI_API_KEY}",
-          model: "gemini-2.5-flash-lite",
+          maxFacts: 5,
+          primary: {
+            provider: "gemini",
+            apiKey: "${GEMINI_API_KEY}",
+            model: "gemini-2.5-flash-lite",
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta",
+            timeoutMs: 8000,
+          },
+          fallback: {
+            provider: "openai",
+            apiKey: "${OPENAI_API_KEY}",
+            model: "gpt-4o-mini",
+            baseUrl: "https://api.openai.com/v1",
+            timeoutMs: 8000,
+          },
         },
         embedding: {
           ollamaUrl: "http://localhost:11434",

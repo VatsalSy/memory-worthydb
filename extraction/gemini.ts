@@ -1,5 +1,5 @@
 import type { PluginLogger } from "openclaw/plugin-sdk";
-import type { ExtractedFact, WorthyDbConfig } from "../shared/contracts.js";
+import type { ExtractedFact, ExtractionProviderConfig } from "../shared/contracts.js";
 import {
   clamp,
   detectMemoryCategory,
@@ -8,8 +8,6 @@ import {
   sanitizeMemoryText,
   uniqueByNormalizedText,
 } from "../shared/text.js";
-
-type ExtractionConfig = WorthyDbConfig["extraction"];
 
 const MAX_RESPONSE_TOKENS = 300;
 
@@ -37,8 +35,12 @@ export function buildExtractionPrompt(
 ): string {
   return [
     `Extract 0-${maxFacts} atomic, self-contained memory facts from this conversation turn.`,
-    "Focus on: preferences, decisions, entity facts, and durable context.",
-    "Ignore: transient task details, one-off requests, and assistant actions that will not matter next week.",
+    "Focus on: durable preferences, explicit decisions, stable entity facts, and long-lived context that will still matter in future conversations.",
+    "Only keep facts that are likely useful at least a few weeks from now.",
+    "Ignore: transient task details, one-off requests, assistant actions, and anything that only matters in this session.",
+    "Never store ephemeral session-state such as current time/date/day, temporary mood or stress, short-term availability, current weather, or statements like having a rough or hellish day.",
+    "Never store assistant persona/style facts unless the user explicitly asks to remember a standing preference about how the assistant should behave.",
+    "Never store facts whose main subject is the assistant unless they encode a durable user instruction or decision.",
     "",
     'Return only a JSON array of objects: [{"text":"...","category":"preference|decision|entity|fact|other","importance":0.0}]',
     "If nothing is worth remembering, return [].",
@@ -74,16 +76,26 @@ export function normalizeExtractedFact(value: unknown): ExtractedFact | null {
 }
 
 export function parseExtractedFacts(rawText: string, maxFacts: number): ExtractedFact[] {
+  return parseExtractedFactsResult(rawText, maxFacts).facts;
+}
+
+export function parseExtractedFactsResult(
+  rawText: string,
+  maxFacts: number,
+): { facts: ExtractedFact[]; parsed: boolean } {
   try {
     const parsed = JSON.parse(extractJsonArray(rawText));
     if (!Array.isArray(parsed)) {
-      return [];
+      return { facts: [], parsed: false };
     }
-    return uniqueByNormalizedText(
+    return {
+      facts: uniqueByNormalizedText(
       parsed.map(normalizeExtractedFact).filter((fact): fact is ExtractedFact => fact !== null),
-    ).slice(0, maxFacts);
+      ).slice(0, maxFacts),
+      parsed: true,
+    };
   } catch {
-    return [];
+    return { facts: [], parsed: false };
   }
 }
 
@@ -91,7 +103,8 @@ export class GeminiExtractionClient {
   private warnedMissingKey = false;
 
   constructor(
-    private readonly config: ExtractionConfig,
+    private readonly config: ExtractionProviderConfig,
+    private readonly maxFacts: number,
     private readonly logger: PluginLogger,
     private readonly fetchImpl: typeof fetch = fetch,
   ) {}
@@ -105,7 +118,7 @@ export class GeminiExtractionClient {
       return [];
     }
 
-    const prompt = buildExtractionPrompt(userText, assistantText, this.config.maxFacts);
+    const prompt = buildExtractionPrompt(userText, assistantText, this.maxFacts);
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
@@ -120,7 +133,7 @@ export class GeminiExtractionClient {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         const response = await this.fetchImpl(
-          `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:generateContent?key=${this.config.apiKey}`,
+          `${this.config.baseUrl.replace(/\/$/, "")}/models/${this.config.model}:generateContent?key=${this.config.apiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -147,7 +160,11 @@ export class GeminiExtractionClient {
           ? (content?.parts as Array<Record<string, unknown>>)
           : [];
         const rawText = typeof parts[0]?.text === "string" ? parts[0].text : "[]";
-        return parseExtractedFacts(rawText, this.config.maxFacts);
+        const parsed = parseExtractedFactsResult(rawText, this.maxFacts);
+        if (!parsed.parsed) {
+          throw new Error("Gemini extraction returned invalid JSON");
+        }
+        return parsed.facts;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         if (attempt < 2) {
