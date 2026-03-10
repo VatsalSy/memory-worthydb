@@ -10,6 +10,8 @@ dist/
 build/
 coverage/
 *.tsbuildinfo
+*.db
+*.lance
 
 # IDE
 .idea/

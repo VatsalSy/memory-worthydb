@@ -2,42 +2,84 @@
 
 Local-first long-term memory plugin for OpenClaw.
 
-## Overview
+## What It Does
 
-`memory-worthydb` is intended to be a drop-in memory plugin that combines passive capture, LLM-based fact extraction, local vector storage, and per-agent isolation without requiring upstream OpenClaw changes. The planned implementation uses Gemini 2.5 Flash Lite for extraction, Ollama `qwen3-embedding` for embeddings, and LanceDB for storage.
+`memory-worthydb` is a third-party `kind: "memory"` plugin for OpenClaw that combines:
 
-## Planned Architecture
+- Automatic post-turn capture through `agent_end`
+- Automatic pre-turn recall through `before_agent_start`
+- Gemini 2.5 Flash Lite extraction over direct HTTP
+- Ollama `qwen3-embedding` local embeddings
+- LanceDB local vector storage
+- Per-agent database isolation through `dbPath` templates
+- Duplicate rejection on write and TTL/dedup pruning
 
-- OpenClaw extension plugin with `index.ts` entrypoint and `openclaw.plugin.json` manifest
-- Passive capture and recall hooks under `hooks/`
-- LanceDB-backed store under `db/`
-- Plain HTTP clients for Gemini extraction and Ollama embeddings
-- Manual memory tools plus scheduled prune logic
-- Workspace-local `do-not-commit/` references for upstream clones and scratch work
+## Install
 
-## Expected Layout
-
-```text
-memory-worthydb/
-├── index.ts
-├── config.ts
-├── openclaw.plugin.json
-├── package.json
-├── tsconfig.json
-├── db/
-├── embeddings/
-├── extraction/
-├── hooks/
-├── tools/
-├── prune/
-├── scripts/
-└── do-not-commit/
+```bash
+npm install
+npm run build
+npm test
 ```
 
-## Development Notes
+Then place or symlink this repo under `~/.openclaw/extensions/memory-worthydb/` and select it as the active memory plugin in `openclaw.json`.
 
-The repository is still in pre-build stage. Keep local reference checkouts and experiments under `do-not-commit/`, and keep tracked files focused on the actual plugin implementation and repo documentation.
+## Example OpenClaw Config
 
-## License
+```json
+{
+  "plugins": {
+    "slots": {
+      "memory": "memory-worthydb"
+    },
+    "entries": {
+      "memory-worthydb": {
+        "enabled": true,
+        "config": {
+          "extraction": {
+            "apiKey": "${GEMINI_API_KEY}",
+            "model": "gemini-2.5-flash-lite"
+          },
+          "embedding": {
+            "ollamaUrl": "http://localhost:11434",
+            "model": "qwen3-embedding:latest",
+            "dimensions": 4096
+          },
+          "dbPath": "~/.openclaw/memory/worthydb/{agentId}",
+          "autoCapture": true,
+          "autoRecall": true,
+          "maxRecallResults": 8,
+          "dedup": {
+            "threshold": 0.95
+          },
+          "ttl": {
+            "preference": 365,
+            "decision": 180,
+            "entity": 0,
+            "fact": 90,
+            "other": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
 
-No license has been added yet.
+`GEMINI_API_KEY` can come from process env or `~/.openclaw/.env`.
+
+## Manual Commands
+
+```bash
+openclaw worthydb list --agent main
+openclaw worthydb search "what does Vatsal prefer?" --agent main
+openclaw worthydb forget <memory-id> --agent main
+openclaw worthydb prune --agent main --dry-run
+openclaw worthydb stats --agent main
+```
+
+## Notes
+
+- The plugin never requires upstream OpenClaw modifications.
+- If Ollama or Gemini are unavailable, the agent still runs; memory capture/recall degrades gracefully.
+- `scripts/compat-check.sh` is intended as a quick post-update smoke check after `openclaw update`.

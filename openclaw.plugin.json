@@ -1,0 +1,259 @@
+{
+  "id": "memory-worthydb",
+  "name": "Memory WorthyDB",
+  "description": "Local-first LLM-extracted long-term memory for OpenClaw",
+  "kind": "memory",
+  "uiHints": {
+    "extraction.apiKey": {
+      "label": "Gemini API Key",
+      "sensitive": true,
+      "placeholder": "${GEMINI_API_KEY}",
+      "help": "Gemini API key used for durable fact extraction."
+    },
+    "extraction.model": {
+      "label": "Gemini Model",
+      "placeholder": "gemini-2.5-flash-lite",
+      "help": "Gemini model used for extraction."
+    },
+    "extraction.maxFacts": {
+      "label": "Max Extracted Facts",
+      "placeholder": "5",
+      "help": "Maximum number of atomic memories extracted from a turn.",
+      "advanced": true
+    },
+    "extraction.timeoutMs": {
+      "label": "Extraction Timeout",
+      "placeholder": "8000",
+      "help": "Gemini request timeout in milliseconds.",
+      "advanced": true
+    },
+    "embedding.ollamaUrl": {
+      "label": "Ollama URL",
+      "placeholder": "http://localhost:11434",
+      "help": "Base URL for the local Ollama server."
+    },
+    "embedding.model": {
+      "label": "Embedding Model",
+      "placeholder": "qwen3-embedding:latest",
+      "help": "Ollama embedding model used for storage and recall."
+    },
+    "embedding.dimensions": {
+      "label": "Embedding Dimensions",
+      "placeholder": "4096",
+      "help": "Expected embedding dimension for the selected Ollama model.",
+      "advanced": true
+    },
+    "embedding.timeoutMs": {
+      "label": "Embedding Timeout",
+      "placeholder": "5000",
+      "help": "Ollama request timeout in milliseconds.",
+      "advanced": true
+    },
+    "dbPath": {
+      "label": "Database Path",
+      "placeholder": "~/.openclaw/memory/worthydb/{agentId}",
+      "help": "LanceDB path template. Use {agentId} for agent-scoped isolation.",
+      "advanced": true
+    },
+    "autoCapture": {
+      "label": "Auto-Capture",
+      "help": "Automatically extract durable memory facts after each successful turn."
+    },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Automatically inject relevant memories before each turn."
+    },
+    "maxRecallResults": {
+      "label": "Max Recall Results",
+      "placeholder": "8",
+      "help": "Maximum memories injected or returned by recall.",
+      "advanced": true
+    },
+    "dedup.threshold": {
+      "label": "Dedup Threshold",
+      "placeholder": "0.95",
+      "help": "Cosine similarity threshold used to reject duplicate memories.",
+      "advanced": true
+    },
+    "ttl.preference": {
+      "label": "Preference TTL (days)",
+      "placeholder": "365",
+      "help": "Days before unrecalled preferences can expire. Use 0 to keep forever.",
+      "advanced": true
+    },
+    "ttl.decision": {
+      "label": "Decision TTL (days)",
+      "placeholder": "180",
+      "help": "Days before unrecalled decisions can expire.",
+      "advanced": true
+    },
+    "ttl.entity": {
+      "label": "Entity TTL (days)",
+      "placeholder": "0",
+      "help": "Days before entity memories can expire. 0 disables expiry.",
+      "advanced": true
+    },
+    "ttl.fact": {
+      "label": "Fact TTL (days)",
+      "placeholder": "90",
+      "help": "Days before unrecalled facts can expire.",
+      "advanced": true
+    },
+    "ttl.other": {
+      "label": "Other TTL (days)",
+      "placeholder": "30",
+      "help": "Days before unrecalled miscellaneous memories can expire.",
+      "advanced": true
+    },
+    "capture.skipCron": {
+      "label": "Skip Cron Sessions",
+      "help": "Do not capture from cron, isolated, or non-chat sessions.",
+      "advanced": true
+    },
+    "capture.skipNoReply": {
+      "label": "Skip Sentinels",
+      "help": "Ignore NO_REPLY and HEARTBEAT_OK assistant outputs.",
+      "advanced": true
+    },
+    "capture.minTurnChars": {
+      "label": "Min Turn Chars",
+      "placeholder": "20",
+      "help": "Minimum combined user/assistant text length eligible for extraction.",
+      "advanced": true
+    },
+    "capture.maxTurnChars": {
+      "label": "Max Turn Chars",
+      "placeholder": "8000",
+      "help": "Maximum combined user/assistant text length sent to extraction.",
+      "advanced": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "extraction": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "apiKey": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "maxFacts": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 1000,
+            "maximum": 60000
+          }
+        }
+      },
+      "embedding": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "ollamaUrl": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "dimensions": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16384
+          },
+          "timeoutMs": {
+            "type": "number",
+            "minimum": 1000,
+            "maximum": 60000
+          }
+        }
+      },
+      "dbPath": {
+        "type": "string"
+      },
+      "autoCapture": {
+        "type": "boolean"
+      },
+      "autoRecall": {
+        "type": "boolean"
+      },
+      "maxRecallResults": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "dedup": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "threshold": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 0.9999
+          }
+        }
+      },
+      "ttl": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "preference": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "decision": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "entity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "fact": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          },
+          "other": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 3650
+          }
+        }
+      },
+      "capture": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "skipCron": {
+            "type": "boolean"
+          },
+          "skipNoReply": {
+            "type": "boolean"
+          },
+          "minTurnChars": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "maxTurnChars": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20000
+          }
+        }
+      }
+    }
+  }
+}
