@@ -178,11 +178,11 @@ export class MemoryDB {
     return results[0] ?? null;
   }
 
-  async all(limit = 10_000): Promise<MemoryEntry[]> {
+  async all(limit?: number): Promise<MemoryEntry[]> {
     await this.ensureInitialized();
 
     let query: any = this.table!.query();
-    if (typeof query.limit === "function") {
+    if (typeof limit === "number") {
       query = query.limit(limit);
     }
 

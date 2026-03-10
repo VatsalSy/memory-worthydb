@@ -124,6 +124,29 @@ describe("MemoryDB", () => {
     expect(db.initPromise).toBeNull();
   });
 
+  it("all() does not apply a limit by default", async () => {
+    const db = new MemoryDB("/tmp/worthydb-test", 3) as any;
+    let appliedLimit: number | undefined;
+    db.table = {
+      query: () => {
+        const q = {
+          limit: (n: number) => {
+            appliedLimit = n;
+            return q;
+          },
+          toArray: async () => [],
+        };
+        return q;
+      },
+    };
+
+    await db.all();
+    expect(appliedLimit).toBeUndefined();
+
+    await db.all(50);
+    expect(appliedLimit).toBe(50);
+  });
+
   it("queries by id without loading the full table", async () => {
     const db = new MemoryDB("/tmp/worthydb-test", 3) as any;
     let whereClause = "";

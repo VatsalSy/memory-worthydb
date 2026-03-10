@@ -295,11 +295,14 @@ function getEnvValue(name: string): string | undefined {
   return loadOpenClawEnvFile().get(name);
 }
 
-function resolveEnvPlaceholders(value: string): string {
+function resolveEnvPlaceholders(value: string, throwOnMissing = true): string {
   return value.replace(/\$\{([^}]+)\}/g, (_match, envVar: string) => {
     const resolved = getEnvValue(envVar);
     if (!resolved) {
-      throw new Error(`Environment variable ${envVar} is not set`);
+      if (throwOnMissing) {
+        throw new Error(`Environment variable ${envVar} is not set`);
+      }
+      return "";
     }
     return resolved;
   });
@@ -311,7 +314,7 @@ function resolveConfigString(value: unknown, fallback: string): string {
 
 function resolveGeminiApiKey(value: unknown): string {
   if (typeof value === "string" && value.trim()) {
-    return resolveEnvPlaceholders(value.trim());
+    return resolveEnvPlaceholders(value.trim(), false);
   }
   return getEnvValue("GEMINI_API_KEY") ?? "";
 }

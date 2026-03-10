@@ -78,7 +78,7 @@ const worthyDbPlugin = {
         worthydb
           .command("list")
           .description("List memories for an agent")
-          .option("--agent <id>", "Agent id", "default")
+          .option("--agent <id>", "Agent id", "main")
           .option("--limit <n>", "Maximum results", "20")
           .option("--category <name>", "Filter by category")
           .action(async (opts: { agent: string; limit: string; category?: string }) => {
@@ -95,7 +95,7 @@ const worthyDbPlugin = {
           .command("search")
           .description("Search memories")
           .argument("<query>", "Semantic search query")
-          .option("--agent <id>", "Agent id", "default")
+          .option("--agent <id>", "Agent id", "main")
           .option("--limit <n>", "Maximum results", "5")
           .action(async (query: string, opts: { agent: string; limit: string }) => {
             const db = runtime.stores.get(opts.agent);
@@ -124,7 +124,7 @@ const worthyDbPlugin = {
           .command("forget")
           .description("Delete a memory by exact id")
           .argument("<memoryId>", "Memory id")
-          .option("--agent <id>", "Agent id", "default")
+          .option("--agent <id>", "Agent id", "main")
           .action(async (memoryId: string, opts: { agent: string }) => {
             const db = runtime.stores.get(opts.agent);
             await db.delete(memoryId);
@@ -134,7 +134,7 @@ const worthyDbPlugin = {
         worthydb
           .command("prune")
           .description("Run TTL and/or dedup pruning")
-          .option("--agent <id>", "Agent id", "default")
+          .option("--agent <id>", "Agent id", "main")
           .option("--dry-run", "Preview deletes without applying them")
           .option("--ttl", "Run TTL pruning")
           .option("--dedup", "Run near-duplicate pruning")
@@ -158,7 +158,7 @@ const worthyDbPlugin = {
         worthydb
           .command("stats")
           .description("Show memory statistics for an agent")
-          .option("--agent <id>", "Agent id", "default")
+          .option("--agent <id>", "Agent id", "main")
           .action(async (opts: { agent: string }) => {
             const db = runtime.stores.get(opts.agent);
             console.log(JSON.stringify(await db.stats(), null, 2));

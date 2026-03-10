@@ -70,30 +70,36 @@ export function buildCaptureHandler(runtime: WorthyDbRuntime) {
       let captured = 0;
       let duplicates = 0;
 
-      const outcomes = await Promise.all(
+      const factsWithVectors = await Promise.all(
         facts.map(async (fact) => {
-          try {
-            const vector = await runtime.embeddings.embed(fact.text);
-            const duplicate = await db.findDuplicate(vector, runtime.config.dedup.threshold);
-            if (duplicate) {
-              return "duplicate" as const;
-            }
-
-            await db.store({
-              text: fact.text,
-              vector,
-              category: fact.category,
-              importance: fact.importance,
-              agentId,
-              sessionKey,
-            });
-            return "captured" as const;
-          } catch (error) {
-            runtime.logger.warn(`worthydb: failed to capture fact "${fact.text}": ${String(error)}`);
-            return "error" as const;
-          }
+          const vector = await runtime.embeddings.embed(fact.text);
+          return { ...fact, vector };
         }),
       );
+
+      const outcomes: Array<"duplicate" | "captured" | "error"> = [];
+      for (const fact of factsWithVectors) {
+        try {
+          const duplicate = await db.findDuplicate(fact.vector, runtime.config.dedup.threshold);
+          if (duplicate) {
+            outcomes.push("duplicate");
+            continue;
+          }
+
+          await db.store({
+            text: fact.text,
+            vector: fact.vector,
+            category: fact.category,
+            importance: fact.importance,
+            agentId,
+            sessionKey,
+          });
+          outcomes.push("captured");
+        } catch (error) {
+          runtime.logger.warn(`worthydb: failed to capture fact "${fact.text}": ${String(error)}`);
+          outcomes.push("error");
+        }
+      }
 
       for (const outcome of outcomes) {
         if (outcome === "captured") {

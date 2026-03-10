@@ -93,10 +93,13 @@ export function registerForgetTool(api: OpenClawPluginApi, runtime: WorthyDbRunt
 
         if (input.query) {
           const vector = await runtime.embeddings.embed(input.query);
-          let results = await db.search(vector, { limit: 5, minScore: 0.7 });
+          // Get more results to allow for category filtering
+          let results = await db.search(vector, { limit: 25, minScore: 0.7 });
           if (input.category) {
             results = results.filter((result) => result.entry.category === input.category);
           }
+          // Slice to the final intended candidate limit
+          results = results.slice(0, 5);
 
           if (results.length === 0) {
             return {

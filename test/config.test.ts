@@ -12,6 +12,15 @@ describe("parseConfig", () => {
     expect(config.dbPath).toContain("{agentId}");
   });
 
+  it("allows missing placeholders to fall back to empty string", () => {
+    const config = parseConfig({
+      extraction: {
+        apiKey: "${DEFINITELY_MISSING_VAR_123}",
+      },
+    });
+    expect(config.extraction.apiKey).toBe("");
+  });
+
   it("replaces agent id in db path templates", () => {
     const resolved = resolveDbPathForAgent(
       "~/.openclaw/memory/worthydb/{agentId}",
