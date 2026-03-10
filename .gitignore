@@ -1,0 +1,23 @@
+# Scratch and local-only source trees
+do-not-commit/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local Claude/Codex overlay
+CLAUDE.md
+
+# SPECS
+memory-worthydb-spec.md
