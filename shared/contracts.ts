@@ -59,6 +59,7 @@ export type WorthyDbConfig = {
     model: string;
     dimensions: number;
     timeoutMs: number;
+    keepAlive?: string;
   };
   dbPath: string;
   autoCapture: boolean;

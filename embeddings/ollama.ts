@@ -46,6 +46,7 @@ export class OllamaEmbeddingsClient {
         body: {
           model: this.config.model,
           input: prompt,
+          keep_alive: this.config.keepAlive ?? "1h",
         },
         parse: (data: Record<string, unknown>) =>
           Array.isArray(data.embeddings) ? data.embeddings[0] : data.embedding,
@@ -55,6 +56,7 @@ export class OllamaEmbeddingsClient {
         body: {
           model: this.config.model,
           prompt,
+          keep_alive: this.config.keepAlive ?? "1h",
         },
         parse: (data: Record<string, unknown>) => data.embedding,
       },
