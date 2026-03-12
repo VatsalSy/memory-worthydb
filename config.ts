@@ -107,7 +107,7 @@ const UI_HINTS: Record<string, PluginConfigUiHint> = {
     label: "Fallback API Key",
     sensitive: true,
     placeholder: "${OPENAI_API_KEY}",
-    help: "Fallback extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted.",
+    help: "Fallback extractor API key. No environment fallback is applied unless you explicitly pass a value or placeholder such as ${OPENAI_API_KEY}.",
     advanced: true,
   },
   "extraction.fallback.model": {
@@ -286,6 +286,7 @@ const JSON_SCHEMA = {
         model: { type: "string" },
         dimensions: { type: "number", minimum: 1, maximum: 16384 },
         timeoutMs: { type: "number", minimum: 1000, maximum: 60000 },
+        keepAlive: { type: "string" },
       },
     },
     dbPath: { type: "string" },
@@ -409,9 +410,12 @@ function resolveConfigString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? resolveEnvPlaceholders(value.trim()) : fallback;
 }
 
-function resolveOptionalApiKey(value: unknown, envVarName?: string): string {
+function resolveOptionalApiKey(value: unknown, envVarName?: string, useEnvFallback = true): string {
   if (typeof value === "string" && value.trim()) {
     return resolveEnvPlaceholders(value.trim(), false);
+  }
+  if (!useEnvFallback) {
+    return "";
   }
   return envVarName ? getEnvValue(envVarName) ?? "" : "";
 }
@@ -450,11 +454,12 @@ function resolveProviderConfig(
   value: Record<string, unknown> | null,
   defaults: ExtractionProviderConfig,
   label: string,
+  useEnvFallbackApiKey = true,
 ): ExtractionProviderConfig {
   const provider = resolveProvider(value?.provider, defaults.provider, `${label}.provider`);
   return {
     provider,
-    apiKey: resolveOptionalApiKey(value?.apiKey, getProviderEnvVar(provider)),
+    apiKey: resolveOptionalApiKey(value?.apiKey, getProviderEnvVar(provider), useEnvFallbackApiKey),
     model: resolveConfigString(value?.model, defaults.model),
     baseUrl: resolveConfigString(value?.baseUrl, getDefaultBaseUrl(provider)),
     timeoutMs: resolveInteger(
@@ -519,7 +524,7 @@ export function parseConfig(value: unknown): WorthyDbConfig {
   const extractionFallback = extraction.fallback ? asRecord(extraction.fallback, "extraction.fallback") : null;
 
   assertAllowedKeys(extraction, ["apiKey", "model", "maxFacts", "timeoutMs", "primary", "fallback"], "extraction");
-  assertAllowedKeys(embedding, ["ollamaUrl", "model", "dimensions", "timeoutMs"], "embedding");
+  assertAllowedKeys(embedding, ["ollamaUrl", "model", "dimensions", "timeoutMs", "keepAlive"], "embedding");
   assertAllowedKeys(dedup, ["threshold"], "dedup");
   assertAllowedKeys(ttl, ["preference", "decision", "entity", "fact", "other"], "ttl");
   assertAllowedKeys(capture, ["skipCron", "skipNoReply", "minTurnChars", "maxTurnChars"], "capture");
@@ -559,7 +564,12 @@ export function parseConfig(value: unknown): WorthyDbConfig {
             ),
           },
       fallback: {
-        ...resolveProviderConfig(extractionFallback, DEFAULTS.extraction.fallback, "extraction.fallback"),
+        ...resolveProviderConfig(
+          extractionFallback,
+          DEFAULTS.extraction.fallback,
+          "extraction.fallback",
+          false,
+        ),
       },
     },
     embedding: {
@@ -579,6 +589,10 @@ export function parseConfig(value: unknown): WorthyDbConfig {
         60000,
         "embedding.timeoutMs",
       ),
+      keepAlive:
+        embedding.keepAlive === undefined
+          ? undefined
+          : resolveConfigString(embedding.keepAlive, "1h"),
     },
     dbPath: resolveConfigString(cfg.dbPath, DEFAULTS.dbPath),
     autoCapture: resolveBoolean(cfg.autoCapture, DEFAULTS.autoCapture),
@@ -640,7 +654,7 @@ export function resolveDbPathForAgent(
   agentId: string,
   resolvePath: (input: string) => string,
 ): string {
-  const safeAgentId = agentId.replace(/[^a-zA-Z0-9._-]/g, "_") || "default";
+  const safeAgentId = agentId.replace(/[^a-zA-Z0-9_-]/g, "_") || "default";
   return resolvePath(dbPathTemplate.replaceAll("{agentId}", safeAgentId));
 }
 

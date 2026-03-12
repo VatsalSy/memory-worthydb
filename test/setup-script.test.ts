@@ -54,13 +54,6 @@ describe.skipIf(!hasOpenClaw)("setup-openclaw.sh", () => {
             baseUrl: "https://generativelanguage.googleapis.com/v1beta",
             timeoutMs: 8000,
           },
-          fallback: {
-            provider: "openai",
-            apiKey: "${OPENAI_API_KEY}",
-            model: "gpt-4o-mini",
-            baseUrl: "https://api.openai.com/v1",
-            timeoutMs: 8000,
-          },
         },
         embedding: {
           ollamaUrl: "http://localhost:11434",

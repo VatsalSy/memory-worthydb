@@ -322,7 +322,9 @@ const boolValue = (name) => (process.env[name] ?? "false") === "true";
 const normalizedProvider = (value, fallback) =>
   value === "gemini" || value === "openai" || value === "together" ? value : fallback;
 const primaryProvider = normalizedProvider(process.env.WORTHYDB_PRIMARY_PROVIDER, "gemini");
-const fallbackProvider = normalizedProvider(process.env.WORTHYDB_FALLBACK_PROVIDER, "openai");
+const fallbackProviderRaw = process.env.WORTHYDB_FALLBACK_PROVIDER ?? "none";
+const fallbackProvider =
+  fallbackProviderRaw === "none" ? "none" : normalizedProvider(fallbackProviderRaw, "openai");
 
 const payload = {
   extraction: {
@@ -342,21 +344,25 @@ const payload = {
         ),
       timeoutMs: intValue("WORTHYDB_PRIMARY_TIMEOUT_MS") || 8000,
     },
-    fallback: {
-      provider: fallbackProvider,
-      apiKey: process.env.WORTHYDB_FALLBACK_API_KEY ?? "",
-      model: process.env.WORTHYDB_FALLBACK_MODEL ?? "",
-      baseUrl:
-        process.env.WORTHYDB_FALLBACK_BASE_URL ??
-        (
-          fallbackProvider === "gemini"
-            ? "https://generativelanguage.googleapis.com/v1beta"
-            : fallbackProvider === "together"
-              ? "https://api.together.xyz/v1"
-              : "https://api.openai.com/v1"
-        ),
-      timeoutMs: intValue("WORTHYDB_FALLBACK_TIMEOUT_MS") || 8000,
-    },
+    ...(fallbackProvider === "none"
+      ? {}
+      : {
+          fallback: {
+            provider: fallbackProvider,
+            apiKey: process.env.WORTHYDB_FALLBACK_API_KEY ?? "",
+            model: process.env.WORTHYDB_FALLBACK_MODEL ?? "",
+            baseUrl:
+              process.env.WORTHYDB_FALLBACK_BASE_URL ??
+              (
+                fallbackProvider === "gemini"
+                  ? "https://generativelanguage.googleapis.com/v1beta"
+                  : fallbackProvider === "together"
+                    ? "https://api.together.xyz/v1"
+                    : "https://api.openai.com/v1"
+              ),
+            timeoutMs: intValue("WORTHYDB_FALLBACK_TIMEOUT_MS") || 8000,
+          },
+        }),
   },
   embedding: {
     ollamaUrl: process.env.WORTHYDB_OLLAMA_URL,

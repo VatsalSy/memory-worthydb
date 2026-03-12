@@ -48,7 +48,7 @@
       "label": "Fallback API Key",
       "sensitive": true,
       "placeholder": "${OPENAI_API_KEY}",
-      "help": "Fallback extractor API key. Defaults to GEMINI_API_KEY, OPENAI_API_KEY, or TOGETHER_API_KEY based on provider when omitted.",
+      "help": "Fallback extractor API key. No environment fallback is applied unless you explicitly pass a value or placeholder such as ${OPENAI_API_KEY}.",
       "advanced": true
     },
     "extraction.fallback.model": {
@@ -277,6 +277,9 @@
             "type": "number",
             "minimum": 1000,
             "maximum": 60000
+          },
+          "keepAlive": {
+            "type": "string"
           }
         }
       },

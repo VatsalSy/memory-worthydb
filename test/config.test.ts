@@ -35,7 +35,7 @@ describe("parseConfig", () => {
     expect(config.recallMinScore).toBe(0.72);
   });
 
-  it("resolves fallback provider defaults and env-based api keys", () => {
+  it("does not hydrate fallback api keys from environment variables", () => {
     process.env.OPENAI_API_KEY = "openai-test-key";
 
     const config = parseConfig({
@@ -48,7 +48,7 @@ describe("parseConfig", () => {
     });
 
     expect(config.extraction.fallback.provider).toBe("openai");
-    expect(config.extraction.fallback.apiKey).toBe("openai-test-key");
+    expect(config.extraction.fallback.apiKey).toBe("");
     expect(config.extraction.fallback.baseUrl).toBe("https://api.openai.com/v1");
   });
 
@@ -65,8 +65,34 @@ describe("parseConfig", () => {
     });
 
     expect(config.extraction.fallback.provider).toBe("together");
-    expect(config.extraction.fallback.apiKey).toBe("together-test-key");
+    expect(config.extraction.fallback.apiKey).toBe("");
     expect(config.extraction.fallback.baseUrl).toBe("https://api.together.xyz/v1");
+  });
+
+  it("resolves explicit fallback api key placeholders", () => {
+    process.env.OPENAI_API_KEY = "placeholder-openai-key";
+
+    const config = parseConfig({
+      extraction: {
+        fallback: {
+          provider: "openai",
+          apiKey: "${OPENAI_API_KEY}",
+          model: "gpt-4o-mini",
+        },
+      },
+    });
+
+    expect(config.extraction.fallback.apiKey).toBe("placeholder-openai-key");
+  });
+
+  it("accepts embedding.keepAlive when provided", () => {
+    const config = parseConfig({
+      embedding: {
+        keepAlive: "30m",
+      },
+    });
+
+    expect(config.embedding.keepAlive).toBe("30m");
   });
 
   it("accepts the new provider-neutral primary config", () => {
@@ -110,6 +136,16 @@ describe("parseConfig", () => {
     expect(resolved).toBe("/home/tester/.openclaw/memory/worthydb/family-bot");
   });
 
+  it("sanitizes dot segments in agent ids", () => {
+    const resolved = resolveDbPathForAgent(
+      "~/.openclaw/memory/worthydb/{agentId}",
+      "..",
+      (input) => input.replace("~", "/home/tester"),
+    );
+
+    expect(resolved).toBe("/home/tester/.openclaw/memory/worthydb/__");
+  });
+
   it("keeps the checked-in plugin manifest aligned with config exports", async () => {
     const raw = await readFile(new URL("../openclaw.plugin.json", import.meta.url), "utf8");
     const manifest = JSON.parse(raw) as {
@@ -119,5 +155,17 @@ describe("parseConfig", () => {
 
     expect(manifest.uiHints).toEqual(worthyDbUiHints);
     expect(manifest.configSchema).toEqual(worthyDbJsonSchema);
+  });
+});
+
+describe("fallback disable semantics", () => {
+  it("keeps fallback unconfigured when omitted even if OPENAI_API_KEY is set", () => {
+    process.env.OPENAI_API_KEY = "env-openai-key";
+
+    const config = parseConfig({});
+
+    expect(config.extraction.fallback.provider).toBe("openai");
+    expect(config.extraction.fallback.model).toBe("gpt-4o-mini");
+    expect(config.extraction.fallback.apiKey).toBe("");
   });
 });
