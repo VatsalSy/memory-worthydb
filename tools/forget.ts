@@ -47,7 +47,16 @@ export function registerForgetTool(api: OpenClawPluginApi, runtime: WorthyDbRunt
 
         if (typeof input.olderThan === "number") {
           const cutoff = Date.now() - input.olderThan * 24 * 60 * 60 * 1000;
-          const candidates = (await db.all()).filter(
+
+          if (input.force) {
+            await db.deleteOlderThan(cutoff, input.category);
+            return {
+              content: [{ type: "text", text: "Deleted memories matching the age/category filter." }],
+              details: { action: "deleted_bulk" },
+            };
+          }
+
+          const candidates = (await db.all(1000)).filter(
             (entry) =>
               entry.createdAt <= cutoff &&
               (input.category ? entry.category === input.category : true),
@@ -60,33 +69,23 @@ export function registerForgetTool(api: OpenClawPluginApi, runtime: WorthyDbRunt
             };
           }
 
-          if (!input.force) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Found ${candidates.length} memories. Re-run with force=true to delete them.`,
-                },
-              ],
-              details: {
-                action: "preview",
-                count: candidates.length,
-                candidates: candidates.map((entry) => ({
-                  id: entry.id,
-                  text: entry.text,
-                  category: entry.category,
-                  createdAt: entry.createdAt,
-                })),
-              },
-            };
-          }
-
-          await db.deleteMany(candidates.map((entry) => entry.id));
           return {
-            content: [{ type: "text", text: `Deleted ${candidates.length} memories.` }],
+            content: [
+              {
+                type: "text",
+                text: `Found at least ${candidates.length} memories in the latest sample. Re-run with force=true to delete all matching memories.`,
+              },
+            ],
             details: {
-              action: "deleted",
-              ids: candidates.map((entry) => entry.id),
+              action: "preview",
+              count: candidates.length,
+              sampled: true,
+              candidates: candidates.map((entry) => ({
+                id: entry.id,
+                text: entry.text,
+                category: entry.category,
+                createdAt: entry.createdAt,
+              })),
             },
           };
         }
