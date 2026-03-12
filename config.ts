@@ -286,6 +286,7 @@ const JSON_SCHEMA = {
         model: { type: "string" },
         dimensions: { type: "number", minimum: 1, maximum: 16384 },
         timeoutMs: { type: "number", minimum: 1000, maximum: 60000 },
+        keepAlive: { type: "string" },
       },
     },
     dbPath: { type: "string" },
@@ -519,7 +520,7 @@ export function parseConfig(value: unknown): WorthyDbConfig {
   const extractionFallback = extraction.fallback ? asRecord(extraction.fallback, "extraction.fallback") : null;
 
   assertAllowedKeys(extraction, ["apiKey", "model", "maxFacts", "timeoutMs", "primary", "fallback"], "extraction");
-  assertAllowedKeys(embedding, ["ollamaUrl", "model", "dimensions", "timeoutMs"], "embedding");
+  assertAllowedKeys(embedding, ["ollamaUrl", "model", "dimensions", "timeoutMs", "keepAlive"], "embedding");
   assertAllowedKeys(dedup, ["threshold"], "dedup");
   assertAllowedKeys(ttl, ["preference", "decision", "entity", "fact", "other"], "ttl");
   assertAllowedKeys(capture, ["skipCron", "skipNoReply", "minTurnChars", "maxTurnChars"], "capture");
@@ -579,6 +580,10 @@ export function parseConfig(value: unknown): WorthyDbConfig {
         60000,
         "embedding.timeoutMs",
       ),
+      keepAlive:
+        embedding.keepAlive === undefined
+          ? undefined
+          : resolveConfigString(embedding.keepAlive, "1h"),
     },
     dbPath: resolveConfigString(cfg.dbPath, DEFAULTS.dbPath),
     autoCapture: resolveBoolean(cfg.autoCapture, DEFAULTS.autoCapture),

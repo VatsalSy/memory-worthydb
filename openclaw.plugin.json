@@ -277,6 +277,9 @@
             "type": "number",
             "minimum": 1000,
             "maximum": 60000
+          },
+          "keepAlive": {
+            "type": "string"
           }
         }
       },

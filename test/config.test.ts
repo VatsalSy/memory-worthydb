@@ -35,6 +35,16 @@ describe("parseConfig", () => {
     expect(config.recallMinScore).toBe(0.72);
   });
 
+  it("accepts embedding.keepAlive when provided", () => {
+    const config = parseConfig({
+      embedding: {
+        keepAlive: "30m",
+      },
+    });
+
+    expect(config.embedding.keepAlive).toBe("30m");
+  });
+
   it("resolves fallback provider defaults and env-based api keys", () => {
     process.env.OPENAI_API_KEY = "openai-test-key";
 
