@@ -239,6 +239,15 @@ export class MemoryDB {
     return validIds.length;
   }
 
+  async deleteOlderThan(cutoff: number, category?: MemoryEntry["category"]): Promise<void> {
+    await this.ensureInitialized();
+    const clauses = [`createdAt <= ${Math.floor(cutoff)}`];
+    if (category) {
+      clauses.push(`category = '${escapeSqlString(category)}'`);
+    }
+    await this.table!.delete(clauses.join(" AND "));
+  }
+
   async touch(entries: MemoryEntry[], now = Date.now()): Promise<void> {
     await this.ensureInitialized();
     await Promise.all(

@@ -151,7 +151,7 @@ npm run build
 openclaw plugins install --link /absolute/path/to/memory-worthydb
 openclaw config set plugins.entries.memory-worthydb.enabled true --json
 openclaw config set plugins.slots.memory '"memory-worthydb"' --json
-openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"maxFacts":5,"primary":{"provider":"gemini","apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite","baseUrl":"https://generativelanguage.googleapis.com/v1beta","timeoutMs":8000},"fallback":{"provider":"openai","apiKey":"${OPENAI_API_KEY}","model":"gpt-4o-mini","baseUrl":"https://api.openai.com/v1","timeoutMs":8000}},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"recallMinScore":0.45,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
+openclaw config set plugins.entries.memory-worthydb.config '{"extraction":{"maxFacts":5,"primary":{"provider":"gemini","apiKey":"${GEMINI_API_KEY}","model":"gemini-2.5-flash-lite","baseUrl":"https://generativelanguage.googleapis.com/v1beta","timeoutMs":8000}},"embedding":{"ollamaUrl":"http://localhost:11434","model":"qwen3-embedding:latest","dimensions":4096,"keepAlive":"1h"},"dbPath":"~/.openclaw/memory/worthydb/{agentId}","autoCapture":true,"autoRecall":true,"maxRecallResults":8,"recallMinScore":0.45,"dedup":{"threshold":0.95},"ttl":{"preference":365,"decision":180,"entity":0,"fact":90,"other":30}}' --json
 ```
 
 If OpenClaw refuses to update the config because the current config is invalid,
@@ -193,13 +193,6 @@ rather than from a separately copied bundle.
               "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
               "timeoutMs": 8000
             },
-            "fallback": {
-              "provider": "openai",
-              "apiKey": "${OPENAI_API_KEY}",
-              "model": "gpt-4o-mini",
-              "baseUrl": "https://api.openai.com/v1",
-              "timeoutMs": 8000
-            }
           },
           "embedding": {
             "ollamaUrl": "http://localhost:11434",
@@ -278,7 +271,7 @@ All config keys currently supported by the schema are listed below.
 | `extraction.primary.baseUrl` | provider default | Primary API base URL. |
 | `extraction.primary.timeoutMs` | `8000` | Timeout for primary extraction requests in milliseconds. |
 | `extraction.fallback.provider` | `openai` | Fallback extractor provider. Supported values: `gemini`, `openai`, `together`. |
-| `extraction.fallback.apiKey` | provider env | Optional fallback API key. When omitted, the plugin checks the provider-specific env var. |
+| `extraction.fallback.apiKey` | empty string | Optional fallback API key. No environment fallback is applied unless you explicitly pass a value or placeholder such as `${OPENAI_API_KEY}`. |
 | `extraction.fallback.model` | `gpt-4o-mini` | Fallback model id. Leave blank to disable fallback extraction. |
 | `extraction.fallback.baseUrl` | provider default | Fallback API base URL, defaulting to the selected provider's standard endpoint. |
 | `extraction.fallback.timeoutMs` | `8000` | Timeout for fallback extraction requests in milliseconds. |
@@ -286,6 +279,7 @@ All config keys currently supported by the schema are listed below.
 | `embedding.model` | `qwen3-embedding:latest` | Ollama model used to embed stored memories and search queries. |
 | `embedding.dimensions` | `4096` | Expected vector dimension for the selected embedding model. |
 | `embedding.timeoutMs` | `5000` | Timeout for Ollama embedding requests in milliseconds. |
+| `embedding.keepAlive` | unset (`ollama` request default `1h`) | Optional Ollama keep-alive duration passed through to embedding requests. |
 | `dbPath` | `~/.openclaw/memory/worthydb/{agentId}` | LanceDB path template. Keep `{agentId}` to preserve per-agent isolation. |
 | `autoCapture` | `true` | Enables automatic extraction and storage after successful agent turns. |
 | `autoRecall` | `true` | Enables automatic recall injection before agent turns. |

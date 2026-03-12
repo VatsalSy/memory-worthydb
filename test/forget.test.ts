@@ -41,4 +41,32 @@ describe("memory_forget", () => {
     // Should have 5 candidates (the sliced limit)
     expect(result.details.candidates).toHaveLength(5);
   });
+
+  it("uses bounded preview and bulk-delete path for olderThan", async () => {
+    const api: any = { registerTool: vi.fn() };
+    const db: any = {
+      all: vi.fn(async () => [
+        { id: "11111111-1111-1111-1111-111111111111", text: "old fact", category: "fact", createdAt: Date.now() - 9 * 24 * 60 * 60 * 1000 },
+        { id: "22222222-2222-2222-2222-222222222222", text: "new pref", category: "preference", createdAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+      ]),
+      deleteOlderThan: vi.fn(async () => undefined),
+    };
+    const runtime: any = {
+      stores: { get: () => db },
+      embeddings: { embed: async () => [1, 0, 0] },
+      config: { dedup: { threshold: 0.9 } },
+    };
+
+    registerForgetTool(api, runtime);
+    const tool = api.registerTool.mock.calls[0][0]({ agentId: "main" });
+
+    const preview = await tool.execute("call-preview", { olderThan: 7 });
+    expect(db.all).toHaveBeenCalledWith(1000);
+    expect(preview.details.action).toBe("preview");
+    expect(preview.details.sampled).toBe(true);
+
+    const forceDelete = await tool.execute("call-force", { olderThan: 7, category: "fact", force: true });
+    expect(db.deleteOlderThan).toHaveBeenCalledWith(expect.any(Number), "fact");
+    expect(forceDelete.details.action).toBe("deleted_bulk");
+  });
 });
