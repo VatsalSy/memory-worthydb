@@ -640,7 +640,7 @@ export function resolveDbPathForAgent(
   agentId: string,
   resolvePath: (input: string) => string,
 ): string {
-  const safeAgentId = agentId.replace(/[^a-zA-Z0-9._-]/g, "_") || "default";
+  const safeAgentId = agentId.replace(/[^a-zA-Z0-9_-]/g, "_") || "default";
   return resolvePath(dbPathTemplate.replaceAll("{agentId}", safeAgentId));
 }
 

@@ -110,6 +110,16 @@ describe("parseConfig", () => {
     expect(resolved).toBe("/home/tester/.openclaw/memory/worthydb/family-bot");
   });
 
+  it("sanitizes dot segments in agent ids", () => {
+    const resolved = resolveDbPathForAgent(
+      "~/.openclaw/memory/worthydb/{agentId}",
+      "..",
+      (input) => input.replace("~", "/home/tester"),
+    );
+
+    expect(resolved).toBe("/home/tester/.openclaw/memory/worthydb/__");
+  });
+
   it("keeps the checked-in plugin manifest aligned with config exports", async () => {
     const raw = await readFile(new URL("../openclaw.plugin.json", import.meta.url), "utf8");
     const manifest = JSON.parse(raw) as {
