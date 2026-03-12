@@ -409,9 +409,12 @@ function resolveConfigString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim() ? resolveEnvPlaceholders(value.trim()) : fallback;
 }
 
-function resolveOptionalApiKey(value: unknown, envVarName?: string): string {
+function resolveOptionalApiKey(value: unknown, envVarName?: string, useEnvFallback = true): string {
   if (typeof value === "string" && value.trim()) {
     return resolveEnvPlaceholders(value.trim(), false);
+  }
+  if (!useEnvFallback) {
+    return "";
   }
   return envVarName ? getEnvValue(envVarName) ?? "" : "";
 }
@@ -450,11 +453,12 @@ function resolveProviderConfig(
   value: Record<string, unknown> | null,
   defaults: ExtractionProviderConfig,
   label: string,
+  useEnvFallbackApiKey = true,
 ): ExtractionProviderConfig {
   const provider = resolveProvider(value?.provider, defaults.provider, `${label}.provider`);
   return {
     provider,
-    apiKey: resolveOptionalApiKey(value?.apiKey, getProviderEnvVar(provider)),
+    apiKey: resolveOptionalApiKey(value?.apiKey, getProviderEnvVar(provider), useEnvFallbackApiKey),
     model: resolveConfigString(value?.model, defaults.model),
     baseUrl: resolveConfigString(value?.baseUrl, getDefaultBaseUrl(provider)),
     timeoutMs: resolveInteger(
@@ -559,7 +563,12 @@ export function parseConfig(value: unknown): WorthyDbConfig {
             ),
           },
       fallback: {
-        ...resolveProviderConfig(extractionFallback, DEFAULTS.extraction.fallback, "extraction.fallback"),
+        ...resolveProviderConfig(
+          extractionFallback,
+          DEFAULTS.extraction.fallback,
+          "extraction.fallback",
+          false,
+        ),
       },
     },
     embedding: {

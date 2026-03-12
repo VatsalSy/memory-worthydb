@@ -35,7 +35,7 @@ describe("parseConfig", () => {
     expect(config.recallMinScore).toBe(0.72);
   });
 
-  it("resolves fallback provider defaults and env-based api keys", () => {
+  it("does not hydrate fallback api keys from environment variables", () => {
     process.env.OPENAI_API_KEY = "openai-test-key";
 
     const config = parseConfig({
@@ -48,7 +48,7 @@ describe("parseConfig", () => {
     });
 
     expect(config.extraction.fallback.provider).toBe("openai");
-    expect(config.extraction.fallback.apiKey).toBe("openai-test-key");
+    expect(config.extraction.fallback.apiKey).toBe("");
     expect(config.extraction.fallback.baseUrl).toBe("https://api.openai.com/v1");
   });
 
@@ -65,8 +65,25 @@ describe("parseConfig", () => {
     });
 
     expect(config.extraction.fallback.provider).toBe("together");
-    expect(config.extraction.fallback.apiKey).toBe("together-test-key");
+    expect(config.extraction.fallback.apiKey).toBe("");
     expect(config.extraction.fallback.baseUrl).toBe("https://api.together.xyz/v1");
+  });
+
+
+  it("resolves explicit fallback api key placeholders", () => {
+    process.env.OPENAI_API_KEY = "placeholder-openai-key";
+
+    const config = parseConfig({
+      extraction: {
+        fallback: {
+          provider: "openai",
+          apiKey: "${OPENAI_API_KEY}",
+          model: "gpt-4o-mini",
+        },
+      },
+    });
+
+    expect(config.extraction.fallback.apiKey).toBe("placeholder-openai-key");
   });
 
   it("accepts the new provider-neutral primary config", () => {
@@ -119,5 +136,18 @@ describe("parseConfig", () => {
 
     expect(manifest.uiHints).toEqual(worthyDbUiHints);
     expect(manifest.configSchema).toEqual(worthyDbJsonSchema);
+  });
+});
+
+
+describe("fallback disable semantics", () => {
+  it("keeps fallback unconfigured when omitted even if OPENAI_API_KEY is set", () => {
+    process.env.OPENAI_API_KEY = "env-openai-key";
+
+    const config = parseConfig({});
+
+    expect(config.extraction.fallback.provider).toBe("openai");
+    expect(config.extraction.fallback.model).toBe("gpt-4o-mini");
+    expect(config.extraction.fallback.apiKey).toBe("");
   });
 });
