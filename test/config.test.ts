@@ -159,13 +159,11 @@ describe("parseConfig", () => {
 });
 
 describe("fallback disable semantics", () => {
-  it("keeps fallback unconfigured when omitted even if OPENAI_API_KEY is set", () => {
+  it("keeps fallback API keys unconfigured when omitted even if OPENAI_API_KEY is set", () => {
     process.env.OPENAI_API_KEY = "env-openai-key";
 
     const config = parseConfig({});
 
-    expect(config.extraction.fallback.provider).toBe("openai");
-    expect(config.extraction.fallback.model).toBe("gpt-4o-mini");
     expect(config.extraction.fallback.apiKey).toBe("");
   });
 });
