@@ -7,7 +7,7 @@ Local-first long-term memory plugin for OpenClaw.
 `memory-worthydb` is a third-party `kind: "memory"` plugin for OpenClaw that combines:
 
 - Automatic post-turn capture through `agent_end`
-- Automatic pre-turn recall through `before_agent_start`
+- Automatic pre-turn recall through `before_prompt_build`
 - Provider-neutral extraction with `gemini`, `openai`, or `together` as primary or fallback
 - Gemini direct HTTP extraction plus OpenAI-compatible chat completions for OpenAI and Together
 - Ollama `qwen3-embedding` local embeddings
@@ -142,6 +142,10 @@ it safe to run against isolated test profiles.
 
 After install, restart the OpenClaw gateway or daemon process so the linked plugin
 and updated config are reloaded.
+
+OpenClaw still exposes the legacy `before_agent_start` hook, but new prompt-context
+injection work should use `before_prompt_build`. This plugin now uses only the modern
+hook at runtime, while keeping regression coverage for the legacy path in tests.
 
 ## Manual Install
 

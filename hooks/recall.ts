@@ -26,44 +26,57 @@ export function formatRecallContext(results: MemorySearchResult[]): string | nul
   ].join("\n");
 }
 
-export function buildRecallHandler(runtime: WorthyDbRuntime) {
-  return async (
-    event: { prompt: string; messages?: unknown[] },
-    ctx: PluginHookAgentContext,
-  ): Promise<{ prependContext?: string } | void> => {
-    const prompt = event.prompt?.trim();
-    if (!prompt || prompt.length < 10) {
+async function recallForPrompt(
+  prompt: string,
+  ctx: PluginHookAgentContext,
+  runtime: WorthyDbRuntime,
+): Promise<{ prependContext?: string } | void> {
+  const trimmedPrompt = prompt.trim();
+  if (!trimmedPrompt || trimmedPrompt.length < 10) {
+    return;
+  }
+
+  try {
+    const vector = await runtime.embeddings.embed(trimmedPrompt);
+    const db = runtime.stores.get(resolveAgentId(ctx));
+    const results = await db.search(vector, {
+      limit: runtime.config.maxRecallResults,
+      minScore: runtime.config.recallMinScore,
+    });
+
+    if (results.length === 0) {
       return;
     }
 
     try {
-      const vector = await runtime.embeddings.embed(prompt);
-      const db = runtime.stores.get(resolveAgentId(ctx));
-      const results = await db.search(vector, {
-        limit: runtime.config.maxRecallResults,
-        minScore: runtime.config.recallMinScore,
-      });
-
-      if (results.length === 0) {
-        return;
-      }
-
-      try {
-        await db.touch(results.map((result) => result.entry));
-      } catch (error) {
-        runtime.logger.warn(`worthydb: failed to update recall hit counters: ${String(error)}`);
-      }
-
-      const prependContext = formatRecallContext(results);
-      if (!prependContext) {
-        return;
-      }
-
-      runtime.logger.info(`worthydb: recalled ${results.length} memories`);
-      return { prependContext };
+      await db.touch(results.map((result) => result.entry));
     } catch (error) {
-      runtime.logger.warn(`worthydb: recall failed: ${String(error)}`);
+      runtime.logger.warn(`worthydb: failed to update recall hit counters: ${String(error)}`);
+    }
+
+    const prependContext = formatRecallContext(results);
+    if (!prependContext) {
       return;
     }
-  };
+
+    runtime.logger.info(`worthydb: recalled ${results.length} memories`);
+    return { prependContext };
+  } catch (error) {
+    runtime.logger.warn(`worthydb: recall failed: ${String(error)}`);
+    return;
+  }
+}
+
+export function buildRecallHandler(runtime: WorthyDbRuntime) {
+  return async (
+    event: { prompt: string; messages: unknown[] },
+    ctx: PluginHookAgentContext,
+  ): Promise<{ prependContext?: string } | void> => recallForPrompt(event.prompt, ctx, runtime);
+}
+
+export function buildLegacyRecallHandler(runtime: WorthyDbRuntime) {
+  return async (
+    event: { prompt: string; messages?: unknown[] },
+    ctx: PluginHookAgentContext,
+  ): Promise<{ prependContext?: string } | void> => recallForPrompt(event.prompt, ctx, runtime);
 }

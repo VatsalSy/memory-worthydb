@@ -64,7 +64,7 @@ const worthyDbPlugin = {
     registerForgetTool(api, runtime);
 
     if (config.autoRecall) {
-      api.on("before_agent_start", buildRecallHandler(runtime));
+      api.on("before_prompt_build", buildRecallHandler(runtime));
     }
 
     if (config.autoCapture) {
