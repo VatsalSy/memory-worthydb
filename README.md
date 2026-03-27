@@ -19,7 +19,7 @@ Local-first long-term memory plugin for OpenClaw.
 
 Before installing from source, make sure all of the following are already available:
 
-- Node.js `>=20.11.0`
+- Node.js `>=22.16.0`
 - OpenClaw `>=2026.3.8`
 - `openclaw`, `node`, `npm`, and `curl` on `PATH`
 - Ollama running locally at `http://localhost:11434` or another reachable URL

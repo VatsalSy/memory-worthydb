@@ -5,7 +5,7 @@
   "description": "Local-first LLM-extracted long-term memory for OpenClaw",
   "license": "MIT",
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22.16.0"
   },
   "scripts": {
     "build": "tsc --noEmit",
@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/node": "^24.5.2",
     "music-metadata": "^11.12.3",
-    "openclaw": "^2026.3.13",
+    "openclaw": "^2026.3.23",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
@@ -32,6 +32,7 @@
     ]
   },
   "overrides": {
-    "@hono/node-server": "1.19.11"
+    "@hono/node-server": "1.19.11",
+    "picomatch": "^4.0.4"
   }
 }
